@@ -1,13 +1,13 @@
 /**
  * Derive the Clerk issuer URL from CLERK_ISSUER_URL or by decoding the
- * publishable key (`pk_(test|live)_<base64-encoded-domain>`).
+ * Next.js publishable key (`pk_(test|live)_<base64-encoded-domain>`).
  */
 export function getClerkIssuerUrl(): string {
   const issuerOverride = process.env.CLERK_ISSUER_URL?.trim();
   if (issuerOverride) return issuerOverride;
 
-  const pk = process.env.CLERK_PUBLISHABLE_KEY?.trim();
-  if (!pk) throw new Error("CLERK_ISSUER_URL or CLERK_PUBLISHABLE_KEY must be set");
+  const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+  if (!pk) throw new Error("CLERK_ISSUER_URL or NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY must be set");
 
   const match = pk.match(/^pk_(test|live)_(.+)$/);
   if (!match) throw new Error("Invalid Clerk publishable key format");
