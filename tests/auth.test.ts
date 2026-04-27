@@ -30,4 +30,15 @@ describe("getClerkIssuerUrl", () => {
     process.env.CLERK_PUBLISHABLE_KEY = "not_a_real_key";
     expect(() => getClerkIssuerUrl()).toThrow(/Invalid Clerk publishable key format/);
   });
+
+  it("handles trailing whitespace in publishable key", () => {
+    process.env.CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsucXVpcXVwLmNvbSQ\n";
+    expect(getClerkIssuerUrl()).toBe("https://clerk.quiqup.com");
+  });
+
+  it("preserves decoded host when no trailing $ sentinel is present", () => {
+    // base64('clerk.example.com') = 'Y2xlcmsuZXhhbXBsZS5jb20='
+    process.env.CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuZXhhbXBsZS5jb20";
+    expect(getClerkIssuerUrl()).toBe("https://clerk.example.com");
+  });
 });

@@ -3,9 +3,10 @@
  * publishable key (`pk_(test|live)_<base64-encoded-domain>`).
  */
 export function getClerkIssuerUrl(): string {
-  if (process.env.CLERK_ISSUER_URL) return process.env.CLERK_ISSUER_URL;
+  const issuerOverride = process.env.CLERK_ISSUER_URL?.trim();
+  if (issuerOverride) return issuerOverride;
 
-  const pk = process.env.CLERK_PUBLISHABLE_KEY;
+  const pk = process.env.CLERK_PUBLISHABLE_KEY?.trim();
   if (!pk) throw new Error("CLERK_ISSUER_URL or CLERK_PUBLISHABLE_KEY must be set");
 
   const match = pk.match(/^pk_(test|live)_(.+)$/);
