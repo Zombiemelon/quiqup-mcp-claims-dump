@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# quiqup-mcp-claims-dump
 
-## Getting Started
+A diagnostic MCP server replicating the [datacube](https://github.com/quiqupltd/datacube) Clerk-OAuth architecture. Authenticates any MCP client (Claude.ai, Claude Code, Codex, ChatGPT) via the production `clerk.quiqup.com` tenant and exposes one tool: `claims_dump`, which returns the decoded JWT.
 
-First, run the development server:
+**Purpose:** auth-pipeline learning artifact. The dumb tool exists so the auth flow has something to gate. See [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) for the walkthrough.
+
+## Quickstart
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+cp .env.example .env.local   # fill in values from Clerk dashboard
+bun run dev
+curl -i http://localhost:3000/mcp   # expect 401 + WWW-Authenticate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Test
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+bun run test                  # Layer 1 unit tests (9 tests)
+bun run test:integration      # Layer 2 (requires CLERK_SECRET_KEY + RUN_INTEGRATION=1)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Layer 3 (end-to-end) is manual: add the deployed URL as a connector in Claude.ai or Claude Code, complete the OAuth flow, call `claims_dump`.
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js 16 App Router + TypeScript + Bun
+- `@modelcontextprotocol/sdk`, `mcp-handler`, `@clerk/mcp-tools`, `@clerk/nextjs`
+- Vitest
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Reference
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) — runtime walkthrough, file-by-file
+- [datacube](https://github.com/quiqupltd/datacube) — original Mastra-based MCP this replicates
+- [clerk/mcp-nextjs-example](https://github.com/clerk/mcp-nextjs-example) — Clerk's canonical example
