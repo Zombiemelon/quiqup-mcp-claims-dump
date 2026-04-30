@@ -22,6 +22,36 @@ Send `GET /mcp` with no `Authorization` header. The route is wrapped in `withMcp
 
 The MCP client reads that header, fetches the URL, and gets back RFC 9728 Protected Resource Metadata JSON — a small document that names the authorization server(s) the client should authenticate against. That endpoint lives at `app/.well-known/oauth-protected-resource/route.ts`. We don't hand-write the JSON; we delegate to `protectedResourceHandlerClerk` from `@clerk/mcp-tools/next`, which fills the `authorization_servers` array with the Clerk issuer it derives from our env. The same file exports an `OPTIONS` handler for CORS preflight so browser-based MCP clients can fetch it cross-origin.
 
+### Sequence: discovery + OAuth (one-time per client install)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Client as MCP Client<br/>(Claude.ai)
+    participant Server as Our Server<br/>(Vercel)
+    participant Clerk as Clerk<br/>(clerk.quiqup.com)
+
+    Client->>Server: GET /mcp (no token)
+    Server-->>Client: 401 + WWW-Authenticate<br/>resource_metadata=…/.well-known/…
+
+    Client->>Server: GET /.well-known/oauth-protected-resource
+    Server-->>Client: { resource: "…/mcp",<br/>authorization_servers: [Clerk] }
+
+    Client->>Clerk: GET /.well-known/oauth-authorization-server
+    Clerk-->>Client: AS metadata (endpoints + DCR)
+
+    Client->>Clerk: POST /oauth/register (DCR)
+    Clerk-->>Client: { client_id, client_secret }
+
+    User->>Clerk: /oauth/authorize?…&resource=…/mcp&PKCE
+    Clerk->>User: consent screen
+    User->>Clerk: Allow
+    Clerk->>Client: redirect_uri?code=…
+    Client->>Clerk: POST /oauth/token (code + PKCE verifier)
+    Clerk-->>Client: access_token (JWT) + refresh_token
+```
+
 ## What happens during OAuth (DCR + auth code)
 
 After the 401, the client drives a full OAuth 2.1 flow against Clerk — none of this hits our server. The steps:
@@ -38,16 +68,53 @@ Our server's only contribution to all of this was the 401 with the `WWW-Authenti
 
 Now the client retries `POST /mcp` with `Authorization: Bearer <jwt>` and a body like `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"claims_dump","arguments":{}}}`.
 
-`withMcpAuth` extracts the bearer and invokes our verifier (`route.ts:15-25`). The verifier calls `auth({ acceptsToken: "oauth_token" })` from `@clerk/nextjs/server`. That call verifies the JWT signature against Clerk's JWKS (cached locally inside `@clerk/nextjs`), checks `aud` per RFC 8707, checks expiry, and returns a `MachineAuthObject` whose `.subject` is the Clerk user ID. We package that into the `AuthInfo` shape `mcp-handler` expects, stashing the full Clerk auth object in `extra.clerkAuth` so the tool can read it.
+The request first hits `middleware.ts` at the repo root. That file runs `clerkMiddleware()` from `@clerk/nextjs/server` on every matching route, which parses the bearer and attaches per-request context that `auth()` will later read. **Without this file, `auth()` throws** — it has no context to verify against. The matcher in `middleware.ts` explicitly includes `/.well-known/*` so PRM requests also benefit, even though they don't strictly need it.
+
+Once middleware completes, `withMcpAuth` extracts the bearer and invokes our verifier (`route.ts:15-25`). The verifier calls `auth({ acceptsToken: "oauth_token" })` from `@clerk/nextjs/server`. That call reads the request context the middleware prepared, verifies the JWT signature against Clerk's JWKS (cached locally inside `@clerk/nextjs`), checks issuer + expiry, and returns a `MachineAuthObject` whose `.subject` is the Clerk user ID. We package that into the `AuthInfo` shape `mcp-handler` expects, stashing the full Clerk auth object in `extra.clerkAuth` so the tool can read it.
+
+> Note on `aud`: the MCP spec and RFC 8707 *describe* tokens whose `aud` claim is bound to the resource URL the client requested. Empirically, on the Quiqup Clerk tenant, OAuth access tokens come back with `aud: undefined` even when the client sent a `resource=` parameter and "Resource Indicators" is enabled in the dashboard. `auth({ acceptsToken: "oauth_token" })` accepts the token anyway, so this doesn't break authentication — but it does mean we can't rely on `aud` for resource-scoped routing if we ever shard one Clerk tenant across multiple MCP servers. Tracked as an open question.
 
 `mcp-handler` then dispatches to the registered `claims_dump` handler at `claims-dump.ts:55`. The handler reads `extra.authInfo.extra.clerkAuth` for the verified claims, reads `extra.authInfo.token` for the raw bearer (so it can base64-decode the JWT for diagnostic display), calls `buildClaimsDumpResponse` (line 79), and returns a single MCP text content block containing pretty-printed JSON with `authObject`, `decodedJwt`, and `serverNotes`.
 
 The hot path is all local crypto. No DB, no session table, no round-trip to Clerk's Backend SDK. Signature verification + claim extraction, then format and return.
 
+### Sequence: authenticated tool call (every request)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as MCP Client
+    participant MW as middleware.ts<br/>clerkMiddleware()
+    participant Wrap as withMcpAuth<br/>(mcp-handler)
+    participant Verify as our verifier<br/>(route.ts)
+    participant Auth as auth()<br/>(@clerk/nextjs/server)
+    participant JWKS as Clerk JWKS<br/>(local cache)
+    participant Tool as claims_dump<br/>(lib/tools/…)
+
+    Client->>MW: POST /mcp + Bearer eyJ…<br/>{ tools/call: claims_dump }
+    Note right of MW: parses bearer,<br/>attaches request context
+    MW->>Wrap: forward
+    Wrap->>Verify: callback(req, bearerToken)
+    Verify->>Verify: split + decode JWT payload<br/>(diagnostic only)
+    Verify->>Auth: auth({ acceptsToken: "oauth_token" })
+    Auth->>JWKS: fetch keys (cached ~10min)
+    JWKS-->>Auth: public keys
+    Auth->>Auth: verify RS256 sig + iss + exp
+    Auth-->>Verify: { subject, scopes, clientId }
+    Verify-->>Wrap: AuthInfo { token, scopes,<br/>extra: { clerkAuth } }
+    Wrap->>Tool: dispatch with extra.authInfo
+    Tool->>Tool: buildClaimsDumpResponse({<br/>  auth, bearerToken,<br/>  jwksSource, audienceBound })
+    Tool-->>Wrap: { content: [{type:"text", text:"<JSON>"}] }
+    Wrap-->>Client: 200 OK + JSON-RPC body
+```
+
+**The layering insight worth chunking.** Two layers of "auth before code" run before our tool handler: Next.js `clerkMiddleware()` does request-level setup, then `withMcpAuth`'s verifier does MCP-protocol-level validation. Each layer prepares state the next one consumes. When middleware was missing, `auth()` couldn't find its expected request context and threw — the layer below was failing because the layer above hadn't run.
+
 ## File-by-file
 
+- `middleware.ts` — runs `clerkMiddleware()` on every request that matches the configured matcher (everything except Next.js internals and static assets). Required for `auth()` to work in route handlers. Without this file, `auth()` throws `"Clerk: auth() was called but Clerk can't detect usage of clerkMiddleware()"` — that is the single most common Clerk-on-Next.js setup mistake.
 - `app/[transport]/route.ts` — wires `createMcpHandler` + `withMcpAuth` from `mcp-handler` and the Clerk verifier from `@clerk/nextjs/server`. Exports `GET` and `POST`.
-- `app/.well-known/oauth-protected-resource/route.ts` — RFC 9728 PRM via Clerk's `protectedResourceHandlerClerk` helper. Exports `GET` (the metadata) and `OPTIONS` (CORS preflight).
+- `app/.well-known/oauth-protected-resource/route.ts` — RFC 9728 PRM via `generateClerkProtectedResourceMetadata` from `@clerk/mcp-tools/server`. We pass an explicit `resourceUrl` of `${NEXT_PUBLIC_APP_URL}/mcp` because the higher-level `protectedResourceHandlerClerk` derives the resource from the request URL — which loses the `/mcp` path component (the request hits `/.well-known/...`, not `/mcp`). Per MCP authorization spec the resource MUST be the full canonical URL of the MCP endpoint. Exports `GET` (the metadata) and `OPTIONS` (CORS preflight).
 - `lib/auth.ts` — `getClerkIssuerUrl()` derives the issuer URL from `CLERK_ISSUER_URL` or by base64-decoding `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (the `pk_live_<base64>` format Clerk ships). Used to build the JWKS URL surfaced in `claims_dump`'s `serverNotes.jwksSource`.
 - `lib/tools/claims-dump.ts` — `registerClaimsDump(server)` registers the tool against the MCP server. `buildClaimsDumpResponse` is the pure helper that formats the JSON body. Tool takes no args; returns `{ authObject, decodedJwt, serverNotes }`.
 
