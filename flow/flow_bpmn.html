@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>quiqup-mcp-claims-dump — End-to-End Flow (v1)</title>
+
+<!-- Tippy.js (tooltip library) — see SKILL.md "Tooltips on Mermaid nodes" -->
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css">
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+  // Tooltip dictionary — keyed by step ID (S1, S2, etc.). Mermaid prefixes
+  // rendered SVG node IDs as "flowchart-<stepId>-<n>"; we parse the stepId
+  // out and look up the text here.
+  const TOOLTIPS = {
+    // Phase 0 — Network plumbing (before any app code runs)
+    S0_in: "Any HTTP request from Claude.ai (or browser) is leaving its origin. Nothing about us yet — pure internet.",
+    S0a: "Claude.ai's TCP stack does a DNS lookup. <code>quiqup-mcp-claims-dump.vercel.app</code> resolves to Vercel's anycast IP — the same IP for all Vercel-hosted apps; routing happens by SNI hostname.",
+    S0b: "TLS 1.3 handshake at the nearest Vercel point-of-presence. Cert is the <code>*.vercel.app</code> wildcard — we don't manage TLS or HTTPS at all; Vercel's edge does it.",
+    S0c: "Vercel's edge router maps the hostname to the latest production deployment SHA of our project. Applies global rate limits, firewall rules, basic abuse protection.",
+    S0d: "Vercel runs each route as a serverless function (Node.js Lambda-shaped). Cold = no container ready, must spin up. Warm = recent invocation, container still alive.",
+    S0d_cold: "Cold start: ~200-500ms to boot Node.js + load Next.js + initialise modules. First request after idle pays this.",
+    S0d_warm: "Warm start: ~5ms. Container reused across invocations within ~5min idle window.",
+    S0e: "<code>middleware.ts</code> runs on EVERY request whose path matches the matcher (we deliberately include <code>.well-known</code> at <code>middleware.ts:6</code>). It calls <code>clerkMiddleware()</code> which doesn't enforce auth — it sets up the request context so <code>auth()</code> calls later in the codebase work. Missing this was Bug 3 in the build.",
+    S0_out: "Now Next.js dispatches to the matched <code>route.ts</code> file. From here, our app code runs.",
+
+    // Phase A — Discovery & OAuth
+    S1: "Entry point. The user has not yet seen any auth — they're just opening claude.ai in a browser tab.",
+    S2: "User pastes the MCP URL into Claude.ai's connector UI. This is the only manual config — everything after is automated discovery.",
+    S3: "RFC 9728 Protected Resource Metadata. Claude.ai needs to find out: which Authorization Server protects this resource? The PRM is the answer.",
+    S3f: "Our handler. <code>generateClerkProtectedResourceMetadata</code> builds a JSON document pointing at <code>clerk.quiqup.com</code> and listing the resource URL (must include <code>/mcp</code> path or DCR breaks).",
+    S4: "Claude.ai now talks directly to Clerk. AS metadata exposes <code>/authorize</code>, <code>/token</code>, <code>/register</code> endpoints, supported grant types, and JWKS URL.",
+    S5: "RFC 7591 Dynamic Client Registration. Claude.ai POSTs its name + redirect URIs and gets back a fresh <code>client_id</code> (and possibly secret). No human in the OAuth-app dashboard needed.",
+    S6: "PKCE (RFC 7636) starts here: Claude.ai generated a <code>code_verifier</code> locally, hashed it to a <code>code_challenge</code>, sends the challenge. Resource Indicators (RFC 8707) sends the canonical resource URL too.",
+    S7: "Branch point. If the user already has a Clerk session cookie at <code>clerk.quiqup.com</code> (recent sign-in to ANY Clerk-protected app on this tenant), they skip straight to consent.",
+    S7a: "Standard Clerk sign-in screen — email, password, MFA, or SSO depending on tenant config.",
+    S8: "Authorization Code grant. The 302 redirects back to Claude.ai's loopback URL (e.g. <code>http://localhost:55165/callback</code>) with a one-time code.",
+    S9: "Code-for-token exchange. Claude.ai sends the code + the original PKCE verifier. Clerk verifies the verifier hashes to the challenge it stored at S6, then mints the tokens.",
+    S10: "Persistent storage. The macOS Keychain entry survives Claude.ai restarts, so the next session starts already authenticated.",
+    S10e: "Phase A done. The OAuth dance only runs again if tokens expire or the user disconnects/reconnects the MCP.",
+
+    // Phase B — Inbound tool call & Clerk auth
+    S11: "User asks something that maps to a tool. The orchestrator's tool-selection logic matches the user intent against the tool's <code>description</code> field.",
+    S12: "JSON-RPC payload: <code>{ method: 'tools/call', params: { name: 'recent_orders', arguments: {...} }, id: ... }</code>. Claude attaches the cached Bearer from S10.",
+    S13: "Standard HTTPS POST. Vercel's edge does TLS termination, then routes the request to the deployed function based on the file path.",
+    S14: "Next.js App Router maps <code>/[transport]/route.ts</code> to <code>/mcp</code> (<code>basePath: ''</code> at route.ts:10). Both GET and POST land on the same <code>authHandler</code> export.",
+    S15: "<code>withMcpAuth</code> from <code>mcp-handler</code> intercepts before the tool runs. It extracts the Bearer token and hands it to your verifier callback to decide whether to allow the call.",
+    S16: "<code>@clerk/nextjs</code>'s <code>auth()</code> does the real work: fetches Clerk's JWKS (cached internally), verifies the JWT signature, checks the <code>exp</code> claim. <code>acceptsToken: 'oauth_token'</code> tells it to expect <code>at+jwt</code> shape, not session JWT.",
+    S17: "If the token is invalid (bad signature, expired, missing <code>sub</code>), the verifier returns <code>undefined</code> — <code>withMcpAuth</code> converts that into a proper 401 response.",
+    S17a: "401 with <code>WWW-Authenticate: Bearer resource_metadata=https://.../.well-known/oauth-protected-resource</code>. That last bit is what tells Claude.ai 'go re-discover, your token may need refresh.'",
+    S18: "<code>AuthInfo</code> is mcp-handler's internal type. It surfaces the auth context to the tool callback via <code>extra.clerkAuth</code> — that's how <code>recent_orders</code> could (if we wanted) filter by <code>clerkAuth.subject</code>.",
+    S19: "<code>mcp-handler</code> matches the tool name to the registry built at server creation time (<code>createMcpHandler</code> at route.ts:5). The matched callback runs with the validated <code>AuthInfo</code>.",
+
+    // Phase C — Outbound token
+    S20: "The async function inside <code>server.registerTool('recent_orders', ...)</code> starts executing. <code>args</code> is the user-supplied input, validated against the Zod schema.",
+    S21: "<code>isoDaysAgo()</code> generates UTC <code>YYYY-MM-DD</code> strings. Defaults computed at call time (not module load) so 'today' tracks the actual clock.",
+    S22: "Boundary crossing: from tool-specific code into the generic Quiqup helper. <code>quiqupLastmileGet</code> abstracts authentication and URL encoding so individual tools stay simple.",
+    S23: "First step in any outbound call: get a valid Quiqup token. This is the BFF outbound side — completely independent of the inbound Clerk token from Phase B.",
+    S24: "Module-scoped variable <code>cachedToken</code> survives within one warm Vercel Lambda. Cold start (~every few minutes when idle) wipes it and forces a re-mint at S25.",
+    S24a: "Best case: Lambda is warm, token is fresh. Adds ~0ms to the call vs minting (~200ms).",
+    S25: "OAuth2 <code>client_credentials</code> grant. No user is in the loop — the MCP server itself is authenticating to Quiqup as a partner client.",
+    S26: "Defensive check. If Vercel env vars aren't set in production, the tool fails fast with a clear error rather than a confusing 401 from Quiqup.",
+    S26a: "Throw bubbles up to mcp-handler, which converts it to an MCP error response shown to Claude (and ultimately the user).",
+    S27: "Quirk: Quiqup's <code>/oauth/token</code> expects JSON body, not the standard form-encoded OAuth2 shape. Discovered empirically via the <code>quiqup-api</code> CLI skill.",
+    S28: "Most failures here are credential rotation (qadmin.quiqup.com revoked the client) or rate-limit/transient. We don't retry — let cold start re-mint.",
+    S28a: "Throws with the full Quiqup response body for debugging — includes Quiqup's error message format which is more useful than a bare HTTP code.",
+    S29: "<code>expires_in</code> is in seconds (typically 3600). Subtract 30s before storing as absolute ms to give clock-skew buffer between Vercel, our server, and Quiqup's gateway.",
+    S30: "Returns the bare <code>access_token</code> string. <code>quiqupLastmileGet</code> now has a Bearer token and proceeds to Phase D.",
+
+    // Phase D — Outbound call
+    S31: "Phase C produced the token. We now have everything needed to authenticate to Quiqup.",
+    S32: "<code>URLSearchParams</code> is the JS standard. We pass literal Quiqup-style keys like <code>filters[state]</code> and let the API handle encoding.",
+    S33: "<code>[</code> becomes <code>%5B</code>, <code>]</code> becomes <code>%5D</code>. If you skip this and inline raw brackets in a URL string, fetch/curl raise <code>bad range in URL position N</code> — we hit this at the CLI.",
+    S34: "Note: <code>api-ae.quiqup.com</code> is the regional last-mile host. The OAuth host (Phase C, S27) is <code>platform-api.quiqup.com</code> — different host, same OAuth client.",
+    S35: "Quiqup's gateway validates the <code>client_id</code> behind the token. Read scope is permissive across partners (this is why we got Modern Vet's order earlier even though our client doesn't 'own' it).",
+    S36: "Common 401 causes: token expired between mint and call (rare, the 30s buffer prevents most), or revoked client. 404 means the path is wrong (e.g. cross-border orders need <code>/orders/export/{id}</code> instead).",
+    S36a: "Failure surfaces back to Claude as an MCP tool error with the full Quiqup body. Useful for debugging — Quiqup error messages are descriptive.",
+    S37: "Pagination metadata + the actual rows. We only requested <code>limit=5</code> by default but <code>data.total</code> tells us how many MATCHED across all pages.",
+
+    // Phase E — Project, return, render
+    S38: "We're back inside the <code>recent_orders</code> tool callback after <code>quiqupLastmileGet</code> resolved.",
+    S39: "Projection is deliberate. Quiqup's full order JSON is ~150 lines (origin, destination, items, products, tracking URLs). We keep ~10 fields per row for chat-display efficiency.",
+    S40: "Wrapping in a summary object gives the LLM context: 'you asked for X, there are N matching, here are the top K.' Helps it form a useful natural-language reply.",
+    S41: "MCP content type. Tools return content arrays — type 'text' is the simplest; 'image' and 'resource' also exist. We stringify with 2-space indent for human-readable diffs in logs.",
+    S42: "JSON-RPC 2.0 envelope: <code>{ jsonrpc: '2.0', id: &lt;matches request&gt;, result: &lt;our content array&gt; }</code>. <code>mcp-handler</code> does this for us.",
+    S43: "Vercel's response stream. The Lambda completes, but the underlying token cache (Phase C, S29) stays in memory waiting for the next call within the warm window.",
+    S44: "Claude.ai receives the JSON, the orchestrator-LLM reads the summary, formats it as a chat-friendly markdown table or list, and shows it to the user.",
+    S44e: "Subsequent tool calls within ~1h skip Phase C's mint (S25-S29) entirely as long as the Lambda stays warm. Cold start = full Phase C runs again.",
+
+    // Trust boundaries
+    A: "The user-facing identity layer. Clerk knows WHO Slava is (<code>sub</code> claim, email, org memberships). Tokens issued here are bound to a specific user.",
+    B: "The bridge. Holds zero user credentials but two service credentials: Clerk webhook signing keys (inbound JWKS via Clerk SDK) and Quiqup OAuth2 <code>client_id</code>/<code>secret</code> (outbound).",
+    C: "The data layer. Quiqup knows WHICH PARTNER is asking (<code>client_id</code>), but NOT which user inside that partner triggered the call. That distinction lives at the BFF.",
+  };
+
+  mermaid.initialize({ startOnLoad: false, theme: 'default', flowchart: { htmlLabels: true } });
+
+  // Render all Mermaid blocks, then attach Tippy tooltips.
+  await mermaid.run();
+
+  // Walk every rendered Mermaid diagram and tag each node SVG group with its
+  // tooltip via data-tippy-content. Mermaid v10 IDs nodes as
+  // "flowchart-<stepId>-<n>" — we extract stepId via regex.
+  document.querySelectorAll('pre.mermaid svg g.node').forEach((node) => {
+    const m = node.id.match(/^flowchart-(.+?)-\d+$/);
+    if (!m) return;
+    const stepId = m[1];
+    const tip = TOOLTIPS[stepId];
+    if (tip) {
+      node.setAttribute('data-tippy-content', tip);
+      node.style.cursor = 'help';
+    }
+  });
+
+  // Initialise Tippy on every tagged node.
+  // eslint-disable-next-line no-undef
+  tippy('pre.mermaid svg g.node[data-tippy-content]', {
+    allowHTML: true,
+    maxWidth: 420,
+    placement: 'top',
+    animation: 'scale',
+    delay: [120, 0],
+    theme: 'light-border',
+  });
+</script>
+
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; color: #111827; line-height: 1.55; }
+  h1 { margin-bottom: 0.25rem; }
+  .subtitle { color: #6b7280; margin-bottom: 1.5rem; }
+  .phase { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem 1.25rem; margin: 1.25rem 0; background: #fafafa; }
+  .phase h2 { margin-top: 0; font-size: 1.2rem; }
+  .phase p.lead { color: #374151; font-size: 0.95rem; margin: 0.25rem 0 1rem 0; }
+  .callouts { font-size: 0.9rem; background: #fff; border-left: 3px solid #6366f1; padding: 0.5rem 0.85rem; margin-top: 0.75rem; }
+  .callouts ul { margin: 0.25rem 0; padding-left: 1.25rem; }
+  .callouts strong { color: #4338ca; }
+  .legend { display: flex; gap: 0.55rem; flex-wrap: wrap; font-size: 0.8rem; margin-bottom: 1.25rem; }
+  .legend span { padding: 0.18rem 0.55rem; border-radius: 4px; border: 1px solid #d1d5db; }
+  code { font-size: 0.85em; background: #f3f4f6; padding: 0.05rem 0.3rem; border-radius: 3px; }
+  pre.mermaid { background: white; padding: 0.5rem; border-radius: 4px; }
+  .summary-box { background: #eff6ff; border-left: 4px solid #2563eb; padding: 0.75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+  .summary-box p { margin: 0.25rem 0; }
+  .data-flow { font-size: 0.85rem; background: #fffbeb; border-left: 3px solid #d97706; padding: 0.6rem 0.85rem; margin-top: 0.75rem; border-radius: 4px; }
+  .data-flow strong { color: #92400e; }
+  .data-flow table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
+  .data-flow th, .data-flow td { text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid #fde68a; vertical-align: top; }
+  .data-flow th { background: #fef3c7; font-weight: 600; color: #78350f; }
+  .data-flow td:first-child { white-space: nowrap; font-family: ui-monospace, monospace; font-size: 0.78rem; color: #92400e; }
+  .data-flow .mcp-no { color: #16a34a; font-weight: 600; }
+  .data-flow .mcp-yes { color: #dc2626; font-weight: 600; }
+  .data-flow .transient { color: #6b7280; font-style: italic; }
+  .key-callout { background: #fee2e2; border-left: 4px solid #dc2626; padding: 0.6rem 0.9rem; margin-top: 0.75rem; border-radius: 4px; font-size: 0.9rem; }
+  .key-callout strong { color: #991b1b; }
+  .hint { color: #6b7280; font-size: 0.82rem; font-style: italic; margin-top: 0.5rem; }
+  .tippy-box[data-theme~='light-border'] { background: #1f2937; color: #f9fafb; border: 1px solid #374151; }
+  .tippy-box[data-theme~='light-border'] .tippy-arrow { color: #1f2937; }
+  .tippy-content code { background: #374151; color: #fde68a; padding: 0.05rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<h1>quiqup-mcp-claims-dump — End-to-End Flow</h1>
+<p class="subtitle">From a user opening Claude.ai to a Quiqup order rendered in chat. Each phase is one Mermaid diagram. Function-by-function, with file:line refs back into the codebase.</p>
+<p class="hint">💡 Hover any node in the diagrams below — every step has a detailed tooltip explaining the why or gotcha behind it.</p>
+
+<div class="legend">
+  <span style="background:#a7f3d0">event (start/end)</span>
+  <span style="background:#bfdbfe">task / function call</span>
+  <span style="background:#fde68a">gateway (decision)</span>
+  <span style="background:#fbcfe8">state / store</span>
+  <span style="background:#fecaca">failure path</span>
+</div>
+
+<div class="summary-box">
+  <p><strong>Five phases.</strong> Phase A (OAuth dance) runs once per device. Phases B → E run on every tool call.</p>
+  <p><strong>Two trust boundaries.</strong> Inbound = Clerk validates the user (B). Outbound = MCP authenticates itself to Quiqup (C, D). The user identity never crosses the second boundary — that's the BFF pattern.</p>
+</div>
+
+<section class="phase">
+  <h2>Phase 0 — Network plumbing (before any app code)</h2>
+  <p class="lead">Every request from Claude.ai goes through five layers of infrastructure before our <code>route.ts</code> runs. This applies to every Mermaid arrow you see in Phases A → E that touches our server.</p>
+  <pre class="mermaid">
+flowchart TD
+    classDef event fill:#a7f3d0,stroke:#065f46,stroke-width:2px
+    classDef task fill:#bfdbfe,stroke:#1e3a8a,stroke-width:1px
+    classDef gateway fill:#fde68a,stroke:#92400e,stroke-width:2px
+
+    S0_in([HTTP request leaves Claude.ai or browser]):::event
+    S0a["S0a — DNS: quiqup-mcp-claims-dump.vercel.app → Vercel anycast IP"]:::task
+    S0b["S0b — TLS 1.3 handshake at nearest Vercel PoP (cert: *.vercel.app)"]:::task
+    S0c["S0c — Vercel edge: maps hostname → latest production deployment SHA<br/>applies firewall + rate limits"]:::task
+    S0d{"S0d — Lambda warm?"}:::gateway
+    S0d_cold["S0d cold — spin new Node.js container (~200-500ms)"]:::task
+    S0d_warm["S0d warm — reuse existing container (~5ms)"]:::task
+    S0e["S0e — middleware.ts runs (clerkMiddleware())<br/>Sets up auth context for downstream auth() calls"]:::task
+    S0_out([Hand off to matched route handler]):::event
+
+    S0_in --> S0a --> S0b --> S0c --> S0d
+    S0d -->|no| S0d_cold --> S0e
+    S0d -->|yes| S0d_warm --> S0e
+    S0e --> S0_out
+  </pre>
+  <div class="data-flow">
+    <strong>📊 Data flowing in this phase</strong>
+    <table>
+      <tr><th>Step</th><th>Data on the wire</th><th>Stored where</th></tr>
+      <tr><td>S0a</td><td>Hostname only (no PII)</td><td>DNS resolver caches (browser, OS, ISP)</td></tr>
+      <tr><td>S0b</td><td>TLS handshake bytes (random, ECDHE keys)</td><td><span class="transient">Ephemeral — destroyed after session</span></td></tr>
+      <tr><td>S0c–S0e</td><td>Encrypted HTTP request bytes</td><td>Vercel logs request metadata (URL, IP, timestamp) ~30 days</td></tr>
+    </table>
+    <p style="margin-top:0.5rem"><strong>Stored at MCP at this layer:</strong> <span class="mcp-no">nothing</span>. The app code hasn't even started yet.</p>
+  </div>
+</section>
+
+<section class="phase">
+  <h2>Phase A — Discovery & OAuth (one-time, on connect)</h2>
+  <p class="lead">User opens Claude.ai, pastes the MCP URL. The OAuth + DCR + PKCE dance happens. Tokens land in the macOS Keychain.</p>
+  <pre class="mermaid">
+flowchart TD
+    classDef event fill:#a7f3d0,stroke:#065f46,stroke-width:2px
+    classDef task fill:#bfdbfe,stroke:#1e3a8a,stroke-width:1px
+    classDef gateway fill:#fde68a,stroke:#92400e,stroke-width:2px
+    classDef store fill:#fbcfe8,stroke:#9d174d,stroke-width:1px
+
+    S1([User opens Claude.ai]):::event
+    S2["S2 — User adds MCP URL https://quiqup-mcp-claims-dump.vercel.app/mcp"]:::task
+    S3["S3 — Claude.ai GET /.well-known/oauth-protected-resource (PRM)"]:::task
+    S3f["app/.well-known/oauth-protected-resource/route.ts<br/>generateClerkProtectedResourceMetadata()"]:::task
+    S4["S4 — Claude.ai GET clerk.quiqup.com/.well-known/oauth-authorization-server (AS metadata)"]:::task
+    S5["S5 — DCR (RFC 7591): POST clerk.quiqup.com/oauth/register → returns client_id"]:::task
+    S6["S6 — Open browser to /oauth/authorize?client_id=...&code_challenge=...&resource=https://quiqup-mcp-claims-dump.vercel.app/mcp"]:::task
+    S7{"S7 — Cookie at clerk.quiqup.com?"}:::gateway
+    S7a["S7a — User signs in (email/MFA/SSO)"]:::task
+    S8["S8 — Clerk shows consent → user clicks Authorize → 302 with code"]:::task
+    S9["S9 — Claude.ai POST /oauth/token (code + verifier) → access_token (typ=at+jwt) + refresh_token"]:::task
+    S10["S10 — Store under Claude Code-credentials.mcpOAuth['quiqup-claims-dump']"]:::store
+    S10e([Connected. Idle until tool call.]):::event
+
+    S1 --> S2 --> S3 --> S3f --> S4 --> S5 --> S6 --> S7
+    S7 -->|no| S7a --> S8
+    S7 -->|yes| S8
+    S8 --> S9 --> S10 --> S10e
+  </pre>
+  <div class="data-flow">
+    <strong>📊 Data flowing in this phase</strong>
+    <table>
+      <tr><th>Step</th><th>Data on the wire</th><th>Stored at Clerk</th><th>Stored at Claude.ai</th><th>Stored at MCP</th></tr>
+      <tr><td>S3 PRM</td><td>Discovery JSON (resource, authorization_servers)</td><td>—</td><td>Cached for session</td><td><span class="mcp-no">No</span></td></tr>
+      <tr><td>S5 DCR</td><td>Out: client_name, redirect_uris<br>Back: client_id, [secret]</td><td>New OAuth client row in Clerk DB</td><td>client_id+secret → Keychain</td><td><span class="mcp-no">No</span></td></tr>
+      <tr><td>S6 /authorize</td><td>URL params: client_id, code_challenge, redirect_uri, state, resource</td><td>code_challenge stored against session for PKCE</td><td>code_verifier in process memory</td><td><span class="mcp-no">No</span></td></tr>
+      <tr><td>S7a sign-in</td><td><strong>User email + password</strong> (or MFA OTP)</td><td>User authenticated, session cookie on clerk.quiqup.com</td><td>—</td><td><span class="mcp-no">No — never sees password</span></td></tr>
+      <tr><td>S8 callback</td><td>?code=&lt;one-time, ~60s TTL&gt;&amp;state=…</td><td>Code maps to user + PKCE challenge</td><td>code in memory transiently</td><td><span class="mcp-no">No</span></td></tr>
+      <tr><td>S9 token exchange</td><td>Out: code, code_verifier<br>Back: access_token (at+jwt), refresh_token, expires_in</td><td>Refresh token in Clerk DB (rotates on use)</td><td>Both tokens → macOS Keychain</td><td><span class="mcp-no">No — MCP not in this exchange</span></td></tr>
+    </table>
+    <div class="key-callout">
+      <strong>🔑 Key fact:</strong> The MCP server is structurally absent from the OAuth dance. It exposes the PRM endpoint at S3 and that's it. The user's email, password, codes, and tokens never touch our code.
+    </div>
+  </div>
+</section>
+
+<section class="phase">
+  <h2>Phase B — Inbound tool call & Clerk auth</h2>
+  <p class="lead">User asks "show me orders". Claude.ai POSTs a JSON-RPC <code>tools/call</code> to <code>/mcp</code>. The Vercel function authenticates the token before letting it reach the tool.</p>
+  <pre class="mermaid">
+flowchart TD
+    classDef event fill:#a7f3d0,stroke:#065f46,stroke-width:2px
+    classDef task fill:#bfdbfe,stroke:#1e3a8a,stroke-width:1px
+    classDef gateway fill:#fde68a,stroke:#92400e,stroke-width:2px
+    classDef failure fill:#fecaca,stroke:#991b1b,stroke-width:1px
+
+    S11([User: 'show me recent orders']):::event
+    S12["S12 — Claude orchestrator picks tool 'recent_orders'"]:::task
+    S13["S13 — POST https://quiqup-mcp-claims-dump.vercel.app/mcp<br/>Authorization: Bearer eyJ... (Clerk at+jwt)"]:::task
+    S14["S14 — Vercel routes to app/[transport]/route.ts → authHandler"]:::task
+    S15["S15 — withMcpAuth wraps handler (route.ts:13) → calls verifier callback (route.ts:14-26)"]:::task
+    S16["S16 — auth({ acceptsToken: 'oauth_token' }) (route.ts:18)<br/>@clerk/nextjs fetches JWKS, verifies signature + expiry"]:::task
+    S17{"S17 — clerkAuth.subject present?"}:::gateway
+    S17a["S17a — return undefined → withMcpAuth returns 401<br/>+ WWW-Authenticate pointing at PRM"]:::failure
+    S18["S18 — verifier returns AuthInfo<br/>{ token, clientId, scopes, extra: { clerkAuth } } (route.ts:21-26)"]:::task
+    S19["S19 — mcp-handler dispatches to registered tool 'recent_orders'<br/>(registered at route.ts:11 via registerRecentOrders)"]:::task
+
+    S11 --> S12 --> S13 --> S14 --> S15 --> S16 --> S17
+    S17 -->|no| S17a
+    S17 -->|yes| S18 --> S19
+  </pre>
+  <div class="data-flow">
+    <strong>📊 Data flowing in this phase</strong>
+    <table>
+      <tr><th>Step</th><th>Data on the wire</th><th>Stored at MCP</th></tr>
+      <tr><td>S13 POST /mcp</td><td>Header: Authorization: Bearer &lt;Clerk at+jwt&gt;<br>Body: JSON-RPC tools/call payload<br>JWT decoded: sub, iss, exp, iat, scope, jti, client_id</td><td><span class="transient">Transient — held in Lambda request scope, dies when function returns</span></td></tr>
+      <tr><td>S15–S16 verify</td><td>JWKS fetched once from clerk.quiqup.com/.well-known/jwks.json</td><td><strong>JWKS cached in @clerk/nextjs internal LRU</strong> — module memory, lives as long as warm Lambda. No per-request network call to Clerk.</td></tr>
+      <tr><td>S18 AuthInfo</td><td>{ token, clientId, scopes, extra: { clerkAuth } }</td><td><span class="transient">Transient, request-scope only</span></td></tr>
+    </table>
+    <div class="key-callout">
+      <strong>🔑 Key fact:</strong> The Clerk JWT IS visible to the MCP (it's in the Authorization header). But it's never persisted — held only in the Lambda's request memory and garbage-collected when the function returns. We could log it; we don't.
+    </div>
+  </div>
+</section>
+
+<section class="phase">
+  <h2>Phase C — Outbound token (mint or cache)</h2>
+  <p class="lead">Tool starts running. Before calling Quiqup it needs <em>its own</em> Quiqup token (BFF outbound side). Cache hit = skip the mint.</p>
+  <pre class="mermaid">
+flowchart TD
+    classDef event fill:#a7f3d0,stroke:#065f46,stroke-width:2px
+    classDef task fill:#bfdbfe,stroke:#1e3a8a,stroke-width:1px
+    classDef gateway fill:#fde68a,stroke:#92400e,stroke-width:2px
+    classDef store fill:#fbcfe8,stroke:#9d174d,stroke-width:1px
+    classDef failure fill:#fecaca,stroke:#991b1b,stroke-width:1px
+
+    S20([Tool callback fires]):::event
+    S21["S21 — Compute defaults (recent-orders.ts:73)<br/>from = 7d ago, to = today, state = pending, limit = 5"]:::task
+    S22["S22 — Call quiqupLastmileGet('/orders', {...filters}) (recent-orders.ts:80)"]:::task
+    S23["S23 — quiqupLastmileGet calls getQuiqupToken() (quiqup.ts:88)"]:::task
+    S24{"S24 — cachedToken && expiresAt > now?"}:::gateway
+    S24a["S24a — return cachedToken.accessToken"]:::store
+    S25["S25 — mintQuiqupToken() (quiqup.ts:38)"]:::task
+    S26{"S26 — QUIQUP_CLIENT_ID + SECRET set?"}:::gateway
+    S26a["S26a — throw 'Missing QUIQUP_CLIENT_ID...'"]:::failure
+    S27["S27 — POST https://platform-api.quiqup.com/oauth/token<br/>body: { client_id, client_secret, grant_type: 'client_credentials' }"]:::task
+    S28{"S28 — 200 OK?"}:::gateway
+    S28a["S28a — throw 'Quiqup token mint failed...'"]:::failure
+    S29["S29 — cachedToken = { accessToken, expiresAt: now + (expires_in - 30)*1000 } (quiqup.ts:60-67)"]:::store
+    S30["S30 — return accessToken"]:::task
+
+    S20 --> S21 --> S22 --> S23 --> S24
+    S24 -->|yes| S24a --> S30
+    S24 -->|no| S25 --> S26
+    S26 -->|no| S26a
+    S26 -->|yes| S27 --> S28
+    S28 -->|no| S28a
+    S28 -->|yes| S29 --> S30
+  </pre>
+  <div class="data-flow">
+    <strong>📊 Data flowing in this phase</strong>
+    <table>
+      <tr><th>Step</th><th>Data on the wire</th><th>Stored at MCP</th></tr>
+      <tr><td>S22 env read</td><td>—</td><td><span class="mcp-yes">QUIQUP_CLIENT_ID, QUIQUP_CLIENT_SECRET</span> in Vercel encrypted env-var store, injected as process.env. Encrypted at rest, never logged.</td></tr>
+      <tr><td>S27 mint</td><td>Out: { client_id, client_secret, grant_type: "client_credentials" }<br>Back: { access_token, expires_in }</td><td>Quiqup access_token written to module-scoped <code>cachedToken</code> (lib/quiqup.ts:35).</td></tr>
+      <tr><td>S29 cache write</td><td>—</td><td><span class="mcp-yes">{ accessToken, expiresAt }</span> — only persistent thing the MCP holds. Lives in Lambda RAM, lost on cold start.</td></tr>
+    </table>
+    <div class="key-callout">
+      <strong>🔑 Key fact:</strong> This is the ONLY phase where the MCP holds long-lived secret material — the static Quiqup client_id/secret in env vars (encrypted at rest by Vercel) and the minted Quiqup access_token cached in Lambda RAM (lost on cold start).
+    </div>
+  </div>
+</section>
+
+<section class="phase">
+  <h2>Phase D — Outbound call to Quiqup</h2>
+  <p class="lead">Now we have a Quiqup Bearer token. Build the URL, encode the brackets, fire the GET.</p>
+  <pre class="mermaid">
+flowchart TD
+    classDef event fill:#a7f3d0,stroke:#065f46,stroke-width:2px
+    classDef task fill:#bfdbfe,stroke:#1e3a8a,stroke-width:1px
+    classDef gateway fill:#fde68a,stroke:#92400e,stroke-width:2px
+    classDef failure fill:#fecaca,stroke:#991b1b,stroke-width:1px
+
+    S31([Have Quiqup Bearer token]):::event
+    S32["S32 — Build URLSearchParams (quiqup.ts:96)<br/>filters[state]=pending&from=...&to=...&page=1&per_page=5"]:::task
+    S33["S33 — Brackets percent-encoded automatically: filters%5Bstate%5D=pending"]:::task
+    S34["S34 — fetch GET https://api-ae.quiqup.com/orders?... (quiqup.ts:99-104)<br/>headers: Authorization: Bearer (Quiqup token), Accept: application/json"]:::task
+    S35["S35 — Quiqup gateway validates client_credentials token<br/>(partner-scoped — read-permissive across partners)"]:::task
+    S36{"S36 — response.ok?"}:::gateway
+    S36a["S36a — throw 'Quiqup /orders failed: status body'"]:::failure
+    S37["S37 — JSON parse → OrdersResponse<br/>{ current_page, per_page, total, total_pages, results[] }"]:::task
+
+    S31 --> S32 --> S33 --> S34 --> S35 --> S36
+    S36 -->|no| S36a
+    S36 -->|yes| S37
+  </pre>
+  <div class="data-flow">
+    <strong>📊 Data flowing in this phase</strong>
+    <table>
+      <tr><th>Step</th><th>Data on the wire</th><th>Stored at MCP</th></tr>
+      <tr><td>S34 GET /orders</td><td>Out: Authorization: Bearer &lt;Quiqup token&gt;, query params<br>Back: orders JSON ~150 lines per order — includes <strong>PII</strong>: contact emails, phones, full delivery addresses, item descriptions, prices</td><td><span class="transient">Transient only — parsed OrdersResponse lives in request handler scope, returned to Claude, garbage-collected. No persistence.</span></td></tr>
+    </table>
+    <div class="key-callout">
+      <strong>🔑 Key fact:</strong> The order JSON contains real PII (emails, phones, addresses, prices). It crosses the MCP server but is never persisted. If you ever add logging here, GDPR rules apply — log structure metadata, not the raw payload.
+    </div>
+  </div>
+</section>
+
+<section class="phase">
+  <h2>Phase E — Project, return, render</h2>
+  <p class="lead">Raw Quiqup payload is fat (~150 lines per order). The tool projects ~10 fields per row and wraps it in a summary. mcp-handler streams it back to Claude.ai.</p>
+  <pre class="mermaid">
+flowchart TD
+    classDef event fill:#a7f3d0,stroke:#065f46,stroke-width:2px
+    classDef task fill:#bfdbfe,stroke:#1e3a8a,stroke-width:1px
+    classDef store fill:#fbcfe8,stroke:#9d174d,stroke-width:1px
+
+    S38([Have raw OrdersResponse]):::event
+    S39["S39 — rows = data.results.map(o => {...}) (recent-orders.ts:89-99)<br/>keep: id, uuid, state, partner_order_id, brand, contact, emirate, items, created_at, state_updated_at"]:::task
+    S40["S40 — summary = { query, total_matching, returned, orders: rows } (recent-orders.ts:101-106)"]:::task
+    S41["S41 — return { content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }] }"]:::task
+    S42["S42 — mcp-handler wraps as JSON-RPC response (id, result)"]:::task
+    S43["S43 — HTTP 200 streams back to Claude.ai (POST /mcp completes)"]:::task
+    S44["S44 — Claude renders order list to user"]:::store
+    S44e([Done. Cached Quiqup token persists for ~1h cold-start window.]):::event
+
+    S38 --> S39 --> S40 --> S41 --> S42 --> S43 --> S44 --> S44e
+  </pre>
+  <div class="data-flow">
+    <strong>📊 Data flowing in this phase</strong>
+    <table>
+      <tr><th>Step</th><th>Data on the wire</th><th>Stored at MCP</th></tr>
+      <tr><td>S39 projection</td><td>Raw OrdersResponse → ~10 fields per row</td><td><span class="transient">Transient — both raw and projected versions in function scope</span></td></tr>
+      <tr><td>S43 stream out</td><td>JSON-RPC envelope with projected summary (no full PII — contact_name yes, phones/full addresses no)</td><td>None</td></tr>
+      <tr><td>S44 render</td><td>Same JSON</td><td>Whatever Claude.ai's session storage does — outside our control</td></tr>
+    </table>
+    <p style="margin-top:0.5rem"><strong>Phase summary:</strong> projection at S39 is intentional minimisation — by the time data leaves our server, contact emails/phones/full addresses are dropped. Limits PII exposure to Claude.ai's session.</p>
+  </div>
+</section>
+
+<section class="phase">
+  <h2>🗄️ Storage layers menu — what CAN be stored on the MCP</h2>
+  <p class="lead">All of these are available to a Vercel Lambda. Currently we only use one (module-scoped in-memory). Ranked by friction and durability.</p>
+  <div class="data-flow">
+    <table>
+      <tr><th>Storage type</th><th>Durability</th><th>Latency</th><th>Typical use</th></tr>
+      <tr><td>Module-scoped variable <em>(current)</em></td><td>Lost on cold start (~minutes)</td><td>0ms</td><td>Short-lived tokens, JWKS cache</td></tr>
+      <tr><td>Vercel KV (Redis on Upstash)</td><td>Durable</td><td>&lt;10ms</td><td>Token persistence across cold starts, per-user merchant mappings, rate-limit counters</td></tr>
+      <tr><td>Vercel Edge Config</td><td>Durable, write-slow</td><td>&lt;5ms reads, seconds writes</td><td>Read-mostly config, NOT for hourly-rotating tokens</td></tr>
+      <tr><td>Clerk publicMetadata / privateMetadata</td><td>Durable, lives at Clerk</td><td>~30ms (round-trip)</td><td>User-attached config (e.g. <code>quiqup_partner_id</code> per user)</td></tr>
+      <tr><td>External Postgres (Neon, Supabase)</td><td>Durable, queryable</td><td>10-50ms</td><td>Audit logs, impersonation history, full state</td></tr>
+      <tr><td>Vercel Blob</td><td>Durable</td><td>50-200ms</td><td>Files, NOT credentials</td></tr>
+    </table>
+  </div>
+  <div class="data-flow" style="margin-top:0.5rem">
+    <strong>🎯 What I'd recommend storing on the MCP, and where</strong>
+    <table>
+      <tr><th>Data</th><th>Store?</th><th>Where</th><th>Why</th></tr>
+      <tr><td>User's Clerk JWT</td><td><span class="mcp-no">No</span></td><td>n/a</td><td>Short-lived; if leaks, impersonates user until exp. Hold in request scope only.</td></tr>
+      <tr><td>Quiqup access_token</td><td><span class="mcp-yes">Already storing</span></td><td>Module-scope (current). Upgrade to Vercel KV if cold starts get costly</td><td>Survives cold starts → fewer mints → faster first call</td></tr>
+      <tr><td>Quiqup client_secret</td><td><span class="mcp-yes">Yes (already)</span></td><td>Vercel env vars</td><td>Encrypted at rest, never in logs, rotates via dashboard</td></tr>
+      <tr><td>User → merchant mapping</td><td>Eventually yes</td><td>Clerk publicMetadata (cleanest) or Vercel KV</td><td>Lets recent_orders filter by the calling user's actual partner</td></tr>
+      <tr><td>Audit log: who called what tool when</td><td><span class="mcp-yes">Yes</span></td><td>External Postgres or KV with TTL</td><td>Compliance + debugging. Quiqup audit trail loses user identity at the BFF — this rebuilds it.</td></tr>
+      <tr><td>Order data from Quiqup</td><td><span class="mcp-no">No</span></td><td>n/a</td><td>GDPR-sensitive, freshness matters, just re-fetch</td></tr>
+      <tr><td>Refresh tokens (Clerk's)</td><td><span class="mcp-no">No</span></td><td>n/a</td><td>We're not the OAuth client — Claude.ai is. We never see refresh tokens.</td></tr>
+      <tr><td>Impersonation tokens</td><td><span class="mcp-no">No (mint per call)</span></td><td>n/a</td><td>RFC 8693 ideal: per-call, single-use, never persisted</td></tr>
+    </table>
+    <div class="key-callout" style="margin-top:0.6rem">
+      <strong>🧠 Mental model:</strong> the MCP server should hold <em>its own</em> credentials (Quiqup OAuth client, possibly KV for caching). It should NOT hold user credentials — those are evidence-of-identity that pass through, not state to retain. <strong>The inbound trust domain holds user data; the MCP holds bridge state; the outbound trust domain holds the data itself.</strong>
+    </div>
+  </div>
+</section>
+
+<section class="phase">
+  <h2>UML sequence diagram — data flow across actors</h2>
+  <p class="lead">Same process, sequence-diagram view. Shows what data crosses each boundary and which actor holds it. Annotations call out where data is stored vs transient.</p>
+  <pre class="mermaid">
+sequenceDiagram
+    actor U as User (browser)
+    participant CA as Claude.ai
+    participant VE as Vercel Edge + Lambda
+    participant CK as Clerk<br/>clerk.quiqup.com
+    participant QO as Quiqup OAuth<br/>platform-api.quiqup.com
+    participant QL as Quiqup Last-mile<br/>api-ae.quiqup.com
+
+    rect rgba(167, 243, 208, 0.3)
+    Note over U,CK: Phase A — OAuth (one-time)
+    U->>CA: paste MCP URL
+    CA->>VE: GET /.well-known/oauth-protected-resource
+    VE-->>CA: PRM JSON (issuer = clerk.quiqup.com)
+    CA->>CK: GET /.well-known/oauth-authorization-server
+    CK-->>CA: AS metadata
+    CA->>CK: POST /oauth/register (DCR)<br/>{ client_name, redirect_uris }
+    CK-->>CA: { client_id, [secret] }<br/>📦 stored at Clerk DB
+    CA->>U: open /authorize?client_id=...&code_challenge=...
+    U->>CK: email + password (or MFA)
+    Note right of CK: 📦 user session<br/>cookie at clerk.quiqup.com
+    CK-->>U: consent screen
+    U->>CK: Authorize
+    CK-->>CA: 302 with code (~60s TTL)
+    CA->>CK: POST /oauth/token<br/>{ code, code_verifier, client_id }
+    CK-->>CA: { access_token (at+jwt), refresh_token, expires_in }
+    Note right of CA: 📦 stored in macOS Keychain<br/>Claude Code-credentials
+    end
+
+    rect rgba(191, 219, 254, 0.3)
+    Note over U,QL: Phases B → E — Tool call (every request)
+    U->>CA: 'show me recent orders'
+    CA->>VE: POST /mcp<br/>Bearer at+jwt + JSON-RPC body
+    Note right of VE: 🔄 transient — held in<br/>Lambda request scope
+    VE->>VE: middleware.ts → clerkMiddleware()
+    VE->>VE: withMcpAuth → auth({ acceptsToken: 'oauth_token' })
+    VE->>CK: (cached) GET /jwks.json
+    Note right of VE: 📦 JWKS cached in module<br/>memory until cold start
+    VE-->>VE: token verified, AuthInfo built
+
+    alt Quiqup token cached & fresh
+        VE-->>VE: reuse cachedToken (~0ms)
+    else Token missing or expired
+        VE->>QO: POST /oauth/token<br/>{ client_id, client_secret, grant_type }
+        Note right of QO: 📦 client_id/secret in<br/>Vercel encrypted env vars
+        QO-->>VE: { access_token, expires_in }
+        VE-->>VE: cachedToken = { accessToken, expiresAt }
+        Note right of VE: 📦 module-scoped cache<br/>survives warm Lambda only
+    end
+
+    VE->>QL: GET /orders?filters[state]=...<br/>Bearer (Quiqup token)
+    QL-->>VE: orders JSON (PII inside!)<br/>~150 lines per order
+    Note right of VE: 🔄 transient — projected to<br/>~10 fields per row, never persisted
+    VE-->>CA: JSON-RPC result (projected summary)
+    CA-->>U: render order list
+    end
+
+    Note over U,QL: 🔑 Legend — 📦 = persistent storage, 🔄 = transient (request-scoped, lost after)
+  </pre>
+</section>
+
+<section class="phase">
+  <h2>Two trust boundaries — at-a-glance</h2>
+  <p class="lead">The whole picture compressed: who trusts whom, with what token, validated where.</p>
+  <pre class="mermaid">
+flowchart LR
+    classDef domain fill:#bfdbfe,stroke:#1e3a8a,stroke-width:2px
+    classDef bridge fill:#fbcfe8,stroke:#9d174d,stroke-width:2px
+
+    A["Inbound trust domain<br/>Clerk (clerk.quiqup.com)<br/>token: at+jwt, 24h<br/>validated at S16"]:::domain
+    B["MCP server (BFF bridge)<br/>app/[transport]/route.ts<br/>lib/quiqup.ts"]:::bridge
+    C["Outbound trust domain<br/>Quiqup partner OAuth<br/>token: client_credentials, 1h<br/>minted at S27, cached at S29"]:::domain
+
+    A -->|"S13 Bearer at+jwt (Slava's identity)"| B
+    B -->|"S34 Bearer client_credentials (MCP's identity)"| C
+    C -->|"S37 JSON orders"| B
+    B -->|"S43 projected summary"| A
+  </pre>
+</section>
+
+</body>
+</html>
