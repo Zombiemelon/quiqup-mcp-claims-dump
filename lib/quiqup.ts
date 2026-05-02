@@ -55,18 +55,34 @@ const cache = new Map<string, CachedAuth>();
 /**
  * Mints (or returns cached) a Clerk session JWT for the given userId, using
  * the "default" template — i.e. the same shape Quiqup's gateway accepts from
- * Quiqdash. Reuses sessions across token rotations to avoid piling up
- * server-managed sessions at Clerk.
+ * Quiqdash.
+ *
+ * We piggy-back on an existing active Clerk session for the user (e.g. their
+ * Quiqdash login) rather than creating a synthetic one — `createSession` on
+ * the Backend API is gated/unavailable in production tenants, and reusing
+ * the user's real session keeps our impersonation traceable to a real login.
  */
 async function getQuiqupReadyJwt(userId: string): Promise<string> {
   const cached = cache.get(userId);
   if (cached && cached.expiresAt > Date.now()) return cached.jwt;
 
-  // Reuse an existing session if we have one cached; otherwise create one.
+  // Find an existing active session for this user. If they haven't logged
+  // into anything Clerk-protected (Quiqdash, dashboard, etc.) recently,
+  // there'll be no active session and we can't proceed — they need to sign
+  // in first.
   let sessionId = cached?.sessionId;
   if (!sessionId) {
-    const session = await clerk.sessions.createSession({ userId });
-    sessionId = session.id;
+    const sessions = await clerk.sessions.getSessionList({
+      userId,
+      status: "active",
+      limit: 1,
+    });
+    if (sessions.data.length === 0) {
+      throw new Error(
+        `No active Clerk session for userId ${userId}. Sign into Quiqdash (or any Clerk-protected Quiqup app) first to bootstrap a session, then retry.`,
+      );
+    }
+    sessionId = sessions.data[0].id;
   }
 
   // Mint a fresh JWT for this session with the templated claims.
@@ -74,11 +90,20 @@ async function getQuiqupReadyJwt(userId: string): Promise<string> {
   try {
     const result = await clerk.sessions.getToken(sessionId, SESSION_JWT_TEMPLATE);
     jwt = result.jwt;
-  } catch {
-    // The cached session may have expired or been revoked server-side. Make
-    // a fresh one and try again. If that fails, the error bubbles up.
-    const session = await clerk.sessions.createSession({ userId });
-    sessionId = session.id;
+  } catch (err) {
+    // The cached session may have been revoked between calls. Re-list and
+    // retry once.
+    const sessions = await clerk.sessions.getSessionList({
+      userId,
+      status: "active",
+      limit: 1,
+    });
+    if (sessions.data.length === 0) {
+      throw new Error(
+        `Clerk session ${sessionId} unusable and no replacement active session exists for ${userId}. Underlying: ${(err as Error).message}`,
+      );
+    }
+    sessionId = sessions.data[0].id;
     const result = await clerk.sessions.getToken(sessionId, SESSION_JWT_TEMPLATE);
     jwt = result.jwt;
   }
