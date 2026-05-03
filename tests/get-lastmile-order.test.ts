@@ -1,6 +1,32 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { http, HttpResponse } from "msw";
+import { server } from "./setup/msw";
+import cassette from "./cassettes/get-lastmile-order.json";
+
+// Mock the Clerk-session-JWT mint so unit tests don't need real Clerk creds.
+// The client itself is stubbed via msw at the fetch boundary; this just
+// short-circuits the upstream-token-resolution step inside the handler.
+vi.mock("@/lib/quiqup", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getQuiqupReadyJwt: vi.fn(async (_userId: string) => "test-jwt-for-msw"),
+  };
+});
+
+const auth = {
+  userId: "user_test",
+  orgId: null,
+  sessionId: "sess_test",
+  scopes: ["read"],
+  bearerToken: "inbound_at_jwt_unused_in_v3b",
+};
 
 describe("get_lastmile_order", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe("registration", () => {
     // TODO(M2 ship): this test name lies — it asserts the *spec object*,
     // not that the MCP server actually has the tool registered. Either
@@ -10,15 +36,11 @@ describe("get_lastmile_order", () => {
     // test against the wrapper itself). A4 manual verification covers the
     // gap for now. Flagged in 2026-05-03 review.
     it("registers under the expected name with required input schema", async () => {
-      // Spec exposed as a named export from lib/tools/get-lastmile-order.
-      // The wrapper at lib/tools/register.ts feeds spec.inputSchema.shape
-      // to the MCP SDK; here we assert the spec object itself.
       const mod = await import("../lib/tools/get-lastmile-order");
       expect(mod.spec).toBeDefined();
       expect(mod.spec.name).toBe("get_lastmile_order");
       expect(mod.spec.description).toMatch(/order/i);
 
-      // inputSchema is a Zod object — assert shape via parse.
       const result = mod.spec.inputSchema.safeParse({ order_id: "abc" });
       expect(result.success).toBe(true);
     });
@@ -38,6 +60,27 @@ describe("get_lastmile_order", () => {
       const mod = await import("../lib/tools/get-lastmile-order");
       const result = mod.spec.inputSchema.safeParse({ order_id: 123 });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("happy path", () => {
+    it("returns formatted order via msw cassette replay", async () => {
+      const orderId = String(cassette.order.id);
+      server.use(
+        http.get(`https://api-ae.quiqup.com/orders/${orderId}`, () =>
+          HttpResponse.json(cassette),
+        ),
+      );
+
+      const mod = await import("../lib/tools/get-lastmile-order");
+      const result = await mod.spec.handler(auth, { order_id: orderId });
+
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe("text");
+      const parsed = JSON.parse(result.content[0].text);
+      // The handler unwraps Quiqup's `{order: {...}}` envelope.
+      expect(parsed.id).toBe(cassette.order.id);
+      expect(parsed.state).toBe(cassette.order.state);
     });
   });
 });
