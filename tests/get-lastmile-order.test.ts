@@ -16,4 +16,15 @@ describe("get_lastmile_order", () => {
       expect(result.success).toBe(true);
     });
   });
+
+  describe("input validation", () => {
+    it("rejects missing order_id", async () => {
+      const mod = await import("../lib/tools/get-lastmile-order");
+      const result = mod.spec.inputSchema.safeParse({});
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].path).toEqual(["order_id"]);
+      }
+    });
+  });
 });
