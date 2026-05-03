@@ -2,6 +2,13 @@ import { describe, it, expect } from "vitest";
 
 describe("get_lastmile_order", () => {
   describe("registration", () => {
+    // TODO(M2 ship): this test name lies — it asserts the *spec object*,
+    // not that the MCP server actually has the tool registered. Either
+    // rename to "exposes a spec with the expected name and schema" or add
+    // a real registration test that calls server.registerTool and inspects
+    // what got registered (probably belongs in a register.test.ts unit
+    // test against the wrapper itself). A4 manual verification covers the
+    // gap for now. Flagged in 2026-05-03 review.
     it("registers under the expected name with required input schema", async () => {
       // Spec exposed as a named export from lib/tools/get-lastmile-order.
       // The wrapper at lib/tools/register.ts feeds spec.inputSchema.shape
