@@ -26,5 +26,11 @@ describe("get_lastmile_order", () => {
         expect(result.error.issues[0].path).toEqual(["order_id"]);
       }
     });
+
+    it("rejects non-string order_id", async () => {
+      const mod = await import("../lib/tools/get-lastmile-order");
+      const result = mod.spec.inputSchema.safeParse({ order_id: 123 });
+      expect(result.success).toBe(false);
+    });
   });
 });
