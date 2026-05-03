@@ -1,0 +1,158 @@
+{
+  "order": {
+    "initial_order_id": null,
+    "delivery_attempts": 1,
+    "collection_attempts": null,
+    "id": 25286218,
+    "delivery_failure_reason": null,
+    "references": [],
+    "forward_partner_order_id": null,
+    "sku_info": null,
+    "items": [
+      {
+        "dimensions": {
+          "height": 10.0,
+          "length": 10.0,
+          "width": 10.0
+        },
+        "id": "30013031",
+        "name": "\u0643\u0631\u064a\u0645 \u0627\u0644\u062a\u0631\u0637\u064a\u0628 \u0627\u0644\u0646\u0647\u0627\u0631\u064a \u062f\u064a\u0631\u0645\u0627\u0643\u064a\u0631 \u0645\u0646 \u0628\u0648\u0648\u062a\u0633 - \u0627\u0644\u0633\u0639\u0629 150 \u0645\u0644",
+        "parcel_barcode": "25286218-1",
+        "parcel_barcode_generated_by": "quiqup",
+        "quantity": 1,
+        "weight": "5.0"
+      }
+    ],
+    "carrier": "Quiqup",
+    "current_internal_order_id": null,
+    "required_documents": [],
+    "weight_kg": 1.0,
+    "scheduled_for": null,
+    "otp_code": null,
+    "user": {
+      "email": "test@example.com",
+      "fullname": "Test Merchant",
+      "id": 999999
+    },
+    "destination": {
+      "address": {
+        "address1": "Test Street 1, Test Area, Dubai",
+        "address2": "Test Building",
+        "apartment_number": null,
+        "building_name": null,
+        "city": "Sharjah",
+        "coordinates": {
+          "lat": 25.2048,
+          "lng": 55.2708
+        },
+        "country": "AE",
+        "id": "123",
+        "ksa_national_address": null,
+        "metadata": {
+          "is_national_address_valid": true
+        },
+        "postcode": null,
+        "town": "Sharjah"
+      },
+      "arrived_at": null,
+      "checked": false,
+      "contact_email": null,
+      "contact_name": "Test Customer",
+      "contact_phone": "+971500000000",
+      "emirate": "Sharjah",
+      "finished_at": null,
+      "id": "123",
+      "notes": null,
+      "signature": {
+        "url": null
+      },
+      "tracking_token": "2fc99fc1582bec78aad982bfdcff3b37",
+      "tracking_url": "https://track-parcel.quiqup.com/f46b4347-8871-4e21-99f0-c0f87922d424",
+      "zone": {
+        "parent": null,
+        "parent_group": null,
+        "sector": "Sharjah 2"
+      }
+    },
+    "origin": {
+      "address": {
+        "address1": "Test Street 1, Test Area, Dubai",
+        "address2": null,
+        "apartment_number": null,
+        "building_name": null,
+        "city": null,
+        "coordinates": {
+          "lat": 25.2048,
+          "lng": 55.2708
+        },
+        "country": "AE",
+        "id": "123",
+        "ksa_national_address": null,
+        "metadata": {
+          "is_national_address_valid": true
+        },
+        "postcode": null,
+        "town": "Dubai"
+      },
+      "arrived_at": null,
+      "checked": false,
+      "contact_email": null,
+      "contact_name": "Test Customer",
+      "contact_phone": "+971500000000",
+      "emirate": "Dubai",
+      "finished_at": null,
+      "id": "123",
+      "notes": null,
+      "signature": {
+        "url": null
+      },
+      "tracking_token": "9c391c9ff56b6a70bfd22f3b2a84b1cb",
+      "tracking_url": "https://track-parcel.quiqup.com/f46b4347-8871-4e21-99f0-c0f87922d424",
+      "zone": {
+        "parent": "Al Barsha - 1",
+        "parent_group": "Barsha",
+        "sector": "Al Barsha 1"
+      }
+    },
+    "billing_identifier": "TST",
+    "created_at": "2026-05-02T23:58:34.000+04:00",
+    "collection_time": {
+      "collection_after": "2026-05-03T16:30:00.000+04:00",
+      "collection_before": "2026-05-03T18:30:00.000+04:00"
+    },
+    "tracking_url": "https://track-parcel.quiqup.com/f46b4347-8871-4e21-99f0-c0f87922d424",
+    "source": null,
+    "print_label": false,
+    "allowed_payment_types": [
+      "cash",
+      "card"
+    ],
+    "forward_order_id": null,
+    "state_updated_at": "2026-05-03T12:08:28.000+04:00",
+    "confidence": 0.5,
+    "external_order_id": null,
+    "submitted_at": "2026-05-02T23:58:34.000+04:00",
+    "business_partner_id": "test_partner_id",
+    "uuid": "f46b4347-8871-4e21-99f0-c0f87922d424",
+    "payment_amount": "0.0",
+    "service_kind": "partner_next_day",
+    "partner_order_id": "BTAEHDE1082352",
+    "last_event": null,
+    "return_order_id": null,
+    "delivery_time": {
+      "delivery_after": "2026-05-02T23:58:35.000+04:00",
+      "delivery_before": "2026-05-04T23:00:00.000+04:00"
+    },
+    "payment_mode": "pre_paid",
+    "brand_name": "Test Merchant",
+    "kind": "partner_same_day",
+    "reason": null,
+    "region_name": "Dubai",
+    "item_quantity_count": 1,
+    "display_items_info": false,
+    "return_partner_order_id": null,
+    "state": "delivery_complete",
+    "products": [],
+    "mission": null
+  }
+}
