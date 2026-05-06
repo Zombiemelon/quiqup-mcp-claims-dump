@@ -62,7 +62,7 @@ const cache = new Map<string, CachedAuth>();
  * the Backend API is gated/unavailable in production tenants, and reusing
  * the user's real session keeps our impersonation traceable to a real login.
  */
-async function getQuiqupReadyJwt(userId: string): Promise<string> {
+export async function getQuiqupReadyJwt(userId: string): Promise<string> {
   const cached = cache.get(userId);
   if (cached && cached.expiresAt > Date.now()) return cached.jwt;
 
