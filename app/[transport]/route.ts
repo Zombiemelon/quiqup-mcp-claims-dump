@@ -3,20 +3,86 @@ import { auth } from "@clerk/nextjs/server";
 import { registerClaimsDump } from "@/lib/tools/claims-dump";
 import { registerRecentOrders } from "@/lib/tools/recent-orders";
 import { registerTool } from "@/lib/tools/register";
+
+// M2 — fully tested, mocked, error-mapped.
 import { spec as getLastmileOrderSpec } from "@/lib/tools/get-lastmile-order";
+
+// M3 thin pass-through reads (Last-Mile + Fulfilment).
+// TODO(M4): cassette + output schemas + error mapping for these.
+import { spec as getLastmileOrderLabelSpec } from "@/lib/tools/get-lastmile-order-label";
+import { spec as getFulfilmentOrderSpec } from "@/lib/tools/get-fulfilment-order";
+import { spec as listInventorySpec } from "@/lib/tools/list-inventory";
+import { spec as getInventoryBySkuSpec } from "@/lib/tools/get-inventory-by-sku";
+import { spec as listSkuBatchesSpec } from "@/lib/tools/list-sku-batches";
+import { spec as getBatchSpec } from "@/lib/tools/get-batch";
+import { spec as listInboundSlotsSpec } from "@/lib/tools/list-inbound-slots";
+import { spec as listInboundsSpec } from "@/lib/tools/list-inbounds";
+import { spec as getInboundSpec } from "@/lib/tools/get-inbound";
+import { spec as getInboundStateHistorySpec } from "@/lib/tools/get-inbound-state-history";
+import { spec as getInboundItemsSpec } from "@/lib/tools/get-inbound-items";
+import { spec as getProductBySkuSpec } from "@/lib/tools/get-product-by-sku";
+
+// M3 thin pass-through enabled writes.
+// TODO(M4): cassette + output schemas + error mapping for these.
+// TODO(M6): retroactive scope/audit/idempotency guardrails.
+import { spec as createLastmileOrderSpec } from "@/lib/tools/create-lastmile-order";
+import { spec as updateLastmileOrderSpec } from "@/lib/tools/update-lastmile-order";
+import { spec as addParcelToOrderSpec } from "@/lib/tools/add-parcel-to-order";
+import { spec as createFulfilmentOrderSpec } from "@/lib/tools/create-fulfilment-order";
+import { spec as updateFulfilmentOrderSpec } from "@/lib/tools/update-fulfilment-order";
+import { spec as createProductSpec } from "@/lib/tools/create-product";
+import { spec as updateProductSpec } from "@/lib/tools/update-product";
+
+// Disabled-pending-M6: registered for surface coverage; handler throws.
+// Flip on at M6 with scope + audit + idempotency in place.
+import { spec as markReadyForCollectionSpec } from "@/lib/tools/mark-ready-for-collection";
+import { spec as cancelLastmileOrdersBatchSpec } from "@/lib/tools/cancel-lastmile-orders-batch";
+import { spec as removeParcelFromOrderSpec } from "@/lib/tools/remove-parcel-from-order";
+import { spec as adjustStockSpec } from "@/lib/tools/adjust-stock";
+import { spec as bookInboundSlotSpec } from "@/lib/tools/book-inbound-slot";
+import { spec as bulkValidateProductsSpec } from "@/lib/tools/bulk-validate-products";
+import { spec as bulkCommitProductsSpec } from "@/lib/tools/bulk-commit-products";
 
 const handler = createMcpHandler(
   (server) => {
-    // Legacy tools — keep their own register*() functions per M1 audit.
-    // Diagnostic — returns the decoded inbound Clerk JWT.
+    // -- Legacy tools (own register*() functions per M1 audit) --
     registerClaimsDump(server);
-    // Real data — proxies to Quiqup last-mile API via this server's own
-    // OAuth2 client (BFF pattern, see lib/quiqup.ts for the why).
     registerRecentOrders(server);
-    // M2-and-later tools — register through the typed wrapper so M4
-    // can layer guardrails (output-size, redact, scope, rate-limit,
-    // audit) without rewiring per-tool callsites.
+
+    // -- M2: hardened (cassette, output schema, error mapping) --
     registerTool(server, getLastmileOrderSpec);
+
+    // -- M3 reads: thin pass-through (TODO(M4) hardening) --
+    registerTool(server, getLastmileOrderLabelSpec);
+    registerTool(server, getFulfilmentOrderSpec);
+    registerTool(server, listInventorySpec);
+    registerTool(server, getInventoryBySkuSpec);
+    registerTool(server, listSkuBatchesSpec);
+    registerTool(server, getBatchSpec);
+    registerTool(server, listInboundSlotsSpec);
+    registerTool(server, listInboundsSpec);
+    registerTool(server, getInboundSpec);
+    registerTool(server, getInboundStateHistorySpec);
+    registerTool(server, getInboundItemsSpec);
+    registerTool(server, getProductBySkuSpec);
+
+    // -- M3 enabled writes: thin pass-through (TODO(M4)/M6 hardening) --
+    registerTool(server, createLastmileOrderSpec);
+    registerTool(server, updateLastmileOrderSpec);
+    registerTool(server, addParcelToOrderSpec);
+    registerTool(server, createFulfilmentOrderSpec);
+    registerTool(server, updateFulfilmentOrderSpec);
+    registerTool(server, createProductSpec);
+    registerTool(server, updateProductSpec);
+
+    // -- Disabled pending M6 (scope/audit/idempotency) --
+    registerTool(server, markReadyForCollectionSpec);
+    registerTool(server, cancelLastmileOrdersBatchSpec);
+    registerTool(server, removeParcelFromOrderSpec);
+    registerTool(server, adjustStockSpec);
+    registerTool(server, bookInboundSlotSpec);
+    registerTool(server, bulkValidateProductsSpec);
+    registerTool(server, bulkCommitProductsSpec);
   },
   {},
   { basePath: "" },

@@ -3,29 +3,26 @@ import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
-// TODO(M4): no cassette, no output schema, no error mapping. M3 thin
-// pass-through per Slava's hybrid speed call (2026-05-03).
-// Note: prod calls may surface "Business account inactive" on merchants
-// without active product/inventory ops — see Agent E report 2026-05-03.
+// TODO(M4): no cassette, no output schema, no error mapping.
 const inputSchema = z.object({
-  sku: z.string().min(1, "sku is required"),
+  batch_id: z.string().min(1, "batch_id is required"),
 });
 
 const outputSchema = z.object({}).passthrough();
 
 export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
-  name: "get_product_by_sku",
+  name: "get_batch",
   description:
-    "Fetch a single Quiqup Fulfilment product by SKU from platform-api.quiqup.com. Requires an active fulfilment merchant.",
+    "Fetch detail for a single Quiqup Fulfilment inventory batch by batch ID. Includes lot, expiry, received date, and per-bucket stock breakdown.",
   inputSchema,
   outputSchema,
   handler: async (auth, args) => {
-    if (!auth.userId) throw new Error("get_product_by_sku requires an authenticated user");
+    if (!auth.userId) throw new Error("get_batch requires an authenticated user");
     const jwt = await getQuiqupReadyJwt(auth.userId);
     const client = new QuiqupFulfilmentClient({ jwt });
     const data = await client.request(
       "GET",
-      `/api/fulfilment/products/${encodeURIComponent(args.sku)}`,
+      `/api/fulfilment/batches/${encodeURIComponent(args.batch_id)}`,
     );
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
