@@ -115,7 +115,7 @@ describe("get_lastmile_order", () => {
       const mod = await import("../lib/tools/get-lastmile-order");
       await expect(
         mod.spec.handler(auth, { order_id: "nonexistent" }),
-      ).rejects.toThrow(/not.found|404/i);
+      ).rejects.toThrow(/order not found/i);
     });
 
     it("maps Quiqup 401 to a clear MCP auth error", async () => {
@@ -127,7 +127,7 @@ describe("get_lastmile_order", () => {
       const mod = await import("../lib/tools/get-lastmile-order");
       await expect(
         mod.spec.handler(auth, { order_id: "abc" }),
-      ).rejects.toThrow(/unauth|401|token/i);
+      ).rejects.toThrow(/authentication failed/i);
     });
 
     it("maps Quiqup 5xx to MCP upstream error with retry hint", async () => {
@@ -139,7 +139,7 @@ describe("get_lastmile_order", () => {
       const mod = await import("../lib/tools/get-lastmile-order");
       await expect(
         mod.spec.handler(auth, { order_id: "abc" }),
-      ).rejects.toThrow(/upstream|retry|temporar|503/i);
+      ).rejects.toThrow(/temporarily unavailable.*retry/i);
     });
   });
 });
