@@ -83,4 +83,63 @@ describe("get_lastmile_order", () => {
       expect(parsed.state).toBe(cassette.order.state);
     });
   });
+
+  describe("output schema", () => {
+    it("validates the cassette response shape", async () => {
+      const mod = await import("../lib/tools/get-lastmile-order");
+      const result = mod.spec.outputSchema.safeParse(cassette.order);
+      if (!result.success) {
+        // eslint-disable-next-line no-console
+        console.error(result.error.issues);
+      }
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects a payload missing the required id field", async () => {
+      // Defends against a vacuous-green: prove the schema actually rejects.
+      // Per M2 spec T4.1 discipline note.
+      const mod = await import("../lib/tools/get-lastmile-order");
+      const { id: _id, ...withoutId } = cassette.order;
+      const result = mod.spec.outputSchema.safeParse(withoutId);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("error mapping", () => {
+    it("maps Quiqup 404 to a clear MCP error", async () => {
+      server.use(
+        http.get("https://api-ae.quiqup.com/orders/:id", () =>
+          HttpResponse.json({ error: "Not Found" }, { status: 404 }),
+        ),
+      );
+      const mod = await import("../lib/tools/get-lastmile-order");
+      await expect(
+        mod.spec.handler(auth, { order_id: "nonexistent" }),
+      ).rejects.toThrow(/not.found|404/i);
+    });
+
+    it("maps Quiqup 401 to a clear MCP auth error", async () => {
+      server.use(
+        http.get("https://api-ae.quiqup.com/orders/:id", () =>
+          HttpResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        ),
+      );
+      const mod = await import("../lib/tools/get-lastmile-order");
+      await expect(
+        mod.spec.handler(auth, { order_id: "abc" }),
+      ).rejects.toThrow(/unauth|401|token/i);
+    });
+
+    it("maps Quiqup 5xx to MCP upstream error with retry hint", async () => {
+      server.use(
+        http.get("https://api-ae.quiqup.com/orders/:id", () =>
+          HttpResponse.json({ error: "upstream" }, { status: 503 }),
+        ),
+      );
+      const mod = await import("../lib/tools/get-lastmile-order");
+      await expect(
+        mod.spec.handler(auth, { order_id: "abc" }),
+      ).rejects.toThrow(/upstream|retry|temporar|503/i);
+    });
+  });
 });
