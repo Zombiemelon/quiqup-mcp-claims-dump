@@ -76,8 +76,9 @@ describe("get_lastmile_order", () => {
       const result = await mod.spec.handler(auth, { order_id: orderId });
 
       expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe("text");
-      const parsed = JSON.parse(result.content[0].text);
+      const first = result.content[0];
+      if (first.type !== "text") throw new Error("expected text block");
+      const parsed = JSON.parse(first.text);
       // The handler unwraps Quiqup's `{order: {...}}` envelope.
       expect(parsed.id).toBe(cassette.order.id);
       expect(parsed.state).toBe(cassette.order.state);

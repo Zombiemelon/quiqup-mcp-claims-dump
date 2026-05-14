@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { ContentBlock } from "@modelcontextprotocol/sdk/types.js";
 import type { z } from "zod";
 import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
 
@@ -44,7 +45,12 @@ export interface ToolSpec<
     auth: AuthContext,
     args: z.infer<TInput>,
   ) => Promise<{
-    content: Array<{ type: "text"; text: string }>;
+    // The full SDK content union, so tools can return text, image, resource,
+    // or resource_link items — not just text. Widened 2026-05-14 in response
+    // to `get_lastmile_order_label` returning 28KB base64 inside a text block,
+    // which forced client LLMs into bash-heredoc gymnastics to decode bytes
+    // that should have flowed as a `resource` block to begin with.
+    content: ContentBlock[];
     isError?: boolean;
   }>;
 }
