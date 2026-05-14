@@ -8,12 +8,76 @@ import { getQuiqupReadyJwt } from "@/lib/quiqup";
 // New orders land in `pending` state; they only dispatch when
 // mark_ready_for_collection is called (currently disabled-pending-M6).
 // So creating an order via this tool is reversible until ready_for_collection.
-const inputSchema = z.object({
-  // Minimal known-required surface; the full request body is
-  // documented in references/lastmile.md. Passthrough lets callers
-  // include items, payment_mode, references, etc. without an exhaustive
-  // schema.
-}).passthrough();
+//
+// 2026-05-14 — bug fix. The previous `z.object({}).passthrough()` form
+// serialised to JSON Schema `{ properties: {} }`. MCP clients (Claude.ai)
+// saw an empty parameter list and called the tool with `{}`, which the
+// upstream rejected with 422 "[origin] is missing, [destination] is
+// missing, [items] is missing". `.passthrough()` only affects RUNTIME
+// parsing — not the schema MCP serialises to the LLM. Fields must be
+// declared explicitly.
+const addressSchema = z
+  .object({
+    address1: z.string().min(1),
+    address2: z.string().optional(),
+    town: z.string().min(1),
+    city: z.string().optional(),
+    country: z.string().min(2),
+    coordinates: z
+      .object({ lat: z.number(), lng: z.number() })
+      .optional(),
+  })
+  .passthrough();
+
+const contactSchema = z
+  .object({
+    contact_name: z.string().min(1),
+    contact_phone: z.string().min(1),
+    contact_email: z.string().optional(),
+    address: addressSchema,
+    notes: z.string().optional(),
+  })
+  .passthrough();
+
+const itemSchema = z
+  .object({
+    name: z.string().min(1),
+    quantity: z.number().int().min(1),
+    weight: z.union([z.number(), z.string()]).optional(),
+    dimensions: z
+      .object({
+        length: z.number(),
+        width: z.number(),
+        height: z.number(),
+      })
+      .optional(),
+  })
+  .passthrough();
+
+const inputSchema = z
+  .object({
+    kind: z.enum([
+      "partner_same_day",
+      "partner_next_day",
+      "partner_4hr",
+      "partner_return",
+    ]),
+    payment_mode: z.enum(["pre_paid", "paid_on_delivery"]),
+    payment_amount: z.number(),
+    origin: contactSchema,
+    destination: contactSchema,
+    items: z.array(itemSchema).min(1),
+
+    partner_order_id: z.string().optional(),
+    service_kind: z.string().optional(),
+    scheduled_for: z.string().optional(),
+    required_docs: z.array(z.string()).optional(),
+    billing_identifier: z.string().optional(),
+    source: z.string().optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+    notes: z.string().optional(),
+  })
+  .passthrough();
 
 const outputSchema = z.object({}).passthrough();
 
