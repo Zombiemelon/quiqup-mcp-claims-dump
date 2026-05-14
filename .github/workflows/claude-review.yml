@@ -1,0 +1,57 @@
+name: Claude Review
+
+# Auto-review every PR opened or pushed. Distinct from .github/workflows/evals.yml:
+# the eval gate runs deterministic scorers against the lastmile order tool; this
+# one is general code-quality review across the whole diff.
+#
+# Required secret: ANTHROPIC_API_KEY (already set on this repo).
+#
+# Fork PRs are skipped because GitHub blocks secret access from forks by design.
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  # Required by anthropics/claude-code-action@v1 even when using the
+  # direct Anthropic API (action uses GitHub OIDC for its internal token
+  # exchange; missing this fails with "Could not fetch an OIDC token").
+  id-token: write
+
+jobs:
+  review:
+    name: Claude code review
+    runs-on: ubuntu-latest
+    # Skip PRs from forks — they can't access ANTHROPIC_API_KEY anyway.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review this PR against the conventions in AGENTS.md / CLAUDE.md and
+            the existing codebase. Focus on:
+              - Correctness, bugs, edge cases (especially around auth, schemas,
+                and the MCP tool surface in lib/tools/).
+              - Security implications — this repo touches Clerk auth, Quiqup
+                APIs, and creates real orders on staging from CI.
+              - Consistency with M-milestone TDD pattern visible in git log
+                (red/green pairs, narrow disabled-pending-M6 stubs, etc.).
+              - Tool description quality for anything under lib/tools/
+                (see docs/quiqup-api/references/quiqdash-create-order.md
+                for the canonical create-order shape; LLM tool descriptions
+                are the dominant driver of args-consistency).
+
+            Post inline comments on specific issues + a short top-level summary.
+            Skip nitpicks the existing review skill would also skip — focus on
+            things that would actually break or surprise.
+          claude_args: |
+            --max-turns 5
+            --model claude-sonnet-4-6

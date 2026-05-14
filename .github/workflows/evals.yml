@@ -1,0 +1,96 @@
+name: Evals
+
+# Runs the Quiqup-MCP eval suite when relevant code or eval scaffolding
+# changes. Two jobs in parallel:
+#
+#   v1-offline    - eval:lastmile-orders against a fixed local dataset.
+#                   Gate: args-overlap >= 0.85.
+#                   No staging side-effects.
+#
+#   v3-roundtrip  - eval:lastmile-roundtrip hits api.staging.quiqup.com,
+#                   creates a real (pending) order, cancels it.
+#                   Gate: create-2xx == 1.0.
+#                   WARNING: consumes Quiqup staging quota. Path-filtered so
+#                   it only runs when the lastmile order surface actually
+#                   changes.
+#
+# Required GitHub Actions secrets:
+#   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY   (both jobs)
+#   ANTHROPIC_API_KEY                          (both jobs)
+#   QUIQUP_STAGING_CLIENT_ID                   (v3-roundtrip only; last-mile scoped)
+#   QUIQUP_STAGING_CLIENT_SECRET               (v3-roundtrip only)
+#
+# Manual runs: trigger from the Actions tab via "Run workflow" (workflow_dispatch).
+
+on:
+  pull_request:
+    paths:
+      - "lib/tools/create-lastmile-order.ts"
+      - "lib/clients/quiqup-lastmile.ts"
+      - "evals/lastmile-order-creation.ts"
+      - "evals/lastmile-order-roundtrip.ts"
+      - "evals/datasets/lastmile-order-creation-v1.ts"
+      - "evals/datasets/lastmile-order-roundtrip-v1.ts"
+      - "evals/score-tool-call.ts"
+      - "evals/gate.ts"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/evals.yml"
+  workflow_dispatch:
+
+# Cancel earlier in-progress runs on the same PR/branch so the latest commit's
+# eval is the authoritative one.
+concurrency:
+  group: evals-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  v1-offline:
+    name: v1 offline (lastmile-order-creation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Run v1 offline eval (gate: args-overlap >= 0.85)"
+        run: bun run eval:lastmile-orders
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  v3-roundtrip:
+    name: v3 online round-trip (lastmile-order-roundtrip)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Run v3 online round-trip (gate: create-2xx == 1.0)"
+        run: bun run eval:lastmile-roundtrip
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          QUIQUP_STAGING_CLIENT_ID: ${{ secrets.QUIQUP_STAGING_CLIENT_ID }}
+          QUIQUP_STAGING_CLIENT_SECRET: ${{ secrets.QUIQUP_STAGING_CLIENT_SECRET }}
