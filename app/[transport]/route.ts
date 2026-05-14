@@ -7,6 +7,9 @@ import { registerTool } from "@/lib/tools/register";
 // M2 — fully tested, mocked, error-mapped.
 import { spec as getLastmileOrderSpec } from "@/lib/tools/get-lastmile-order";
 
+// Diagnostic — confirms the exchanged session-JWT resolves on platform-api.
+import { spec as whoamiPlatformSpec } from "@/lib/tools/whoami-platform";
+
 // M3 thin pass-through reads (Last-Mile + Fulfilment).
 // TODO(M4): cassette + output schemas + error mapping for these.
 import { spec as getLastmileOrderLabelSpec } from "@/lib/tools/get-lastmile-order-label";
@@ -51,6 +54,9 @@ const handler = createMcpHandler(
 
     // -- M2: hardened (cassette, output schema, error mapping) --
     registerTool(server, getLastmileOrderSpec);
+
+    // -- Diagnostic for auth-vs-payload triage on platform-api --
+    registerTool(server, whoamiPlatformSpec);
 
     // -- M3 reads: thin pass-through (TODO(M4) hardening) --
     registerTool(server, getLastmileOrderLabelSpec);

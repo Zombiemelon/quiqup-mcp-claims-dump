@@ -36,22 +36,15 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            Review this PR against the conventions in AGENTS.md / CLAUDE.md and
-            the existing codebase. Focus on:
-              - Correctness, bugs, edge cases (especially around auth, schemas,
-                and the MCP tool surface in lib/tools/).
-              - Security implications — this repo touches Clerk auth, Quiqup
-                APIs, and creates real orders on staging from CI.
-              - Consistency with M-milestone TDD pattern visible in git log
-                (red/green pairs, narrow disabled-pending-M6 stubs, etc.).
-              - Tool description quality for anything under lib/tools/
-                (see docs/quiqup-api/references/quiqdash-create-order.md
-                for the canonical create-order shape; LLM tool descriptions
-                are the dominant driver of args-consistency).
+            Review this PR. Focus narrowly on:
+              - Correctness bugs / edge cases in changed code
+              - Security (Clerk auth, Quiqup tokens, real-API side effects)
+              - Tool description quality if lib/tools/ changed
 
-            Post inline comments on specific issues + a short top-level summary.
-            Skip nitpicks the existing review skill would also skip — focus on
-            things that would actually break or surprise.
+            Post a short top-level summary plus inline comments only on
+            issues that would actually break or surprise. Skip nits.
+            CLAUDE.md / AGENTS.md and docs/quiqup-api/ have the project
+            conventions and Quiqup API canonical reference.
           claude_args: |
-            --max-turns 5
+            --max-turns 15
             --model claude-sonnet-4-6
