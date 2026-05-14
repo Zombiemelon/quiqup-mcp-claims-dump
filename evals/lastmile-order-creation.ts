@@ -21,6 +21,7 @@ import { LangfuseSpanProcessor } from "@langfuse/otel";
 import { LangfuseClient } from "@langfuse/client";
 import { AnthropicInstrumentation } from "@arizeai/openinference-instrumentation-anthropic";
 import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
 
 import type { ExperimentTask } from "@langfuse/client";
 
@@ -43,13 +44,20 @@ otelSdk.start();
 const langfuse = new LangfuseClient();
 const anthropic = new Anthropic();
 
-// Tool spec mirrors the live MCP tool: same name, same description, same
-// wide-open input schema. When the MCP tool description improves, the eval
-// automatically reflects the change.
+// Tool spec mirrors the live MCP tool: same name, same description, AND
+// same JSON-Schema-serialised input shape. Earlier this hand-built a
+// wide-open `{ type: "object", additionalProperties: true }`, which masked
+// the 2026-05-14 bug where the production schema serialised to empty
+// `{ properties: {} }` and Claude.ai sent `{}`. By deriving the schema
+// from the actual spec the eval now catches that class of regression.
+const inputJsonSchema = z.toJSONSchema(createLastmileOrderSpec.inputSchema, {
+  target: "draft-07",
+  io: "input",
+}) as Record<string, unknown>;
 const tool = {
   name: createLastmileOrderSpec.name,
   description: createLastmileOrderSpec.description,
-  input_schema: { type: "object" as const, additionalProperties: true },
+  input_schema: { ...inputJsonSchema, type: "object" as const },
 };
 
 interface TaskOutput {
