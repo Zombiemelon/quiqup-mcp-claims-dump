@@ -8,7 +8,9 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "RUN_INTEGRATION=1 vitest run"
+    "test:integration": "RUN_INTEGRATION=1 vitest run",
+    "eval:lastmile-orders": "bun run evals/lastmile-order-creation.ts",
+    "eval:lastmile-roundtrip": "bun run evals/lastmile-order-roundtrip.ts"
   },
   "dependencies": {
     "@clerk/mcp-tools": "^0.5.0",
@@ -21,7 +23,12 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.95.2",
+    "@arizeai/openinference-instrumentation-anthropic": "^0.1.10",
     "@clerk/backend": "^3.4.1",
+    "@langfuse/client": "^5.3.0",
+    "@langfuse/otel": "^5.3.0",
+    "@opentelemetry/sdk-node": "^0.218.0",
     "@types/node": "^25.6.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
