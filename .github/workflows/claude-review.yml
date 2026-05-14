@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  # Required by anthropics/claude-code-action@v1 even when using the
+  # direct Anthropic API (action uses GitHub OIDC for its internal token
+  # exchange; missing this fails with "Could not fetch an OIDC token").
+  id-token: write
 
 jobs:
   review:
