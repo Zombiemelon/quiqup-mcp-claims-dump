@@ -54,13 +54,15 @@ describe("tool-surface snapshot", () => {
     expect(current).toEqual(baseline);
   });
 
-  it("baseline contains exactly seven disabled-pending-m6 entries", () => {
+  it("baseline contains no disabled-pending-m6 entries (M6 shipped)", () => {
     // Anchor test: independent of the snapshot-builder, this asserts
-    // that the *current* M6 deferral count is 7. If someone updates the
-    // baseline to flip a flag without updating this number, the failure
-    // points directly at the count assumption rather than burying it
-    // inside a 30-entry equality diff. Update the literal when M6
-    // guardrails ship and the disabled count legitimately drops.
+    // the current count of M6-deferred tools. M6 guardrails (audit,
+    // scope, idempotency, rate-limit) shipped and all seven previously
+    // disabled write tools (adjust_stock, book_inbound_slot,
+    // bulk_commit_products, bulk_validate_products,
+    // cancel_lastmile_orders_batch, mark_ready_for_collection,
+    // remove_parcel_from_order) were re-enabled. Update this literal if
+    // a new tool is added and deferred to a later milestone.
     const baselineRaw = readFileSync(BASELINE_PATH, "utf8");
     const baseline = (
       JSON.parse(baselineRaw) as { tools: Record<string, ToolStatus> }
@@ -68,16 +70,6 @@ describe("tool-surface snapshot", () => {
     const disabled = Object.entries(baseline)
       .filter(([, status]) => status === "disabled-pending-m6")
       .map(([name]) => name);
-    expect(disabled.sort()).toEqual(
-      [
-        "adjust_stock",
-        "book_inbound_slot",
-        "bulk_commit_products",
-        "bulk_validate_products",
-        "cancel_lastmile_orders_batch",
-        "mark_ready_for_collection",
-        "remove_parcel_from_order",
-      ].sort(),
-    );
+    expect(disabled.sort()).toEqual([]);
   });
 });
