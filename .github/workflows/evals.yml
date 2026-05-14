@@ -3,21 +3,21 @@ name: Evals
 # Runs the Quiqup-MCP eval suite when relevant code or eval scaffolding
 # changes. Two jobs in parallel:
 #
-#   v1-offline    — `eval:lastmile-orders` against a fixed local dataset.
+#   v1-offline    - eval:lastmile-orders against a fixed local dataset.
 #                   Gate: args-overlap >= 0.85.
 #                   No staging side-effects.
 #
-#   v3-roundtrip  — `eval:lastmile-roundtrip` hits api.staging.quiqup.com,
+#   v3-roundtrip  - eval:lastmile-roundtrip hits api.staging.quiqup.com,
 #                   creates a real (pending) order, cancels it.
 #                   Gate: create-2xx == 1.0.
-#                   ⚠️  Consumes Quiqup staging quota. Path-filtered so it
-#                   only runs when the lastmile order surface actually
+#                   WARNING: consumes Quiqup staging quota. Path-filtered so
+#                   it only runs when the lastmile order surface actually
 #                   changes.
 #
 # Required GitHub Actions secrets:
 #   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY   (both jobs)
 #   ANTHROPIC_API_KEY                          (both jobs)
-#   QUIQUP_STAGING_CLIENT_ID                   (v3-roundtrip only — last-mile-scoped)
+#   QUIQUP_STAGING_CLIENT_ID                   (v3-roundtrip only; last-mile scoped)
 #   QUIQUP_STAGING_CLIENT_SECRET               (v3-roundtrip only)
 #
 # Manual runs: trigger from the Actions tab via "Run workflow" (workflow_dispatch).
@@ -38,8 +38,8 @@ on:
       - ".github/workflows/evals.yml"
   workflow_dispatch:
 
-# Cancel earlier in-progress runs on the same PR/branch — keeps the latest commit's
-# eval the authoritative one.
+# Cancel earlier in-progress runs on the same PR/branch so the latest commit's
+# eval is the authoritative one.
 concurrency:
   group: evals-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
