@@ -25,11 +25,9 @@ import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
+import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
 
-const PLATFORM_API_BASE =
-  process.env.QUIQUP_PLATFORM_API_BASE_URL ?? "https://platform-api.quiqup.com";
-
-const inputSchema = z.object({});
+const inputSchema = z.object({ environment: environmentField });
 
 // Modeled from the response shape verified in the 2026-05-14 bug report.
 // passthrough so new fields don't break us; required-required fields are
@@ -65,13 +63,14 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     "before the same-IdP exchange).",
   inputSchema,
   outputSchema,
-  handler: async (auth) => {
+  handler: async (auth, args) => {
     if (!auth.userId) {
       throw new Error("whoami_platform requires an authenticated user");
     }
 
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const res = await fetch(`${PLATFORM_API_BASE}/me`, {
+    const platformApiBase = getPlatformApiBaseUrl(args.environment);
+    const res = await fetch(`${platformApiBase}/me`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${jwt}`,

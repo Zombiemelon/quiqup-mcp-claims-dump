@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
 // TODO(M4): no cassette, no output schema, no error mapping. M3 thin
@@ -18,6 +19,7 @@ const inputSchema = z.object({
       (obj) => Object.keys(obj).length > 0,
       { message: "patch must contain at least one field to update" },
     ),
+  environment: environmentField,
 });
 
 const outputSchema = z.object({}).passthrough();
@@ -31,7 +33,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
   handler: async (auth, args) => {
     if (!auth.userId) throw new Error("update_product requires an authenticated user");
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupFulfilmentClient({ jwt });
+    const client = new QuiqupFulfilmentClient({ jwt, environment: args.environment });
     const data = await client.request(
       "PATCH",
       `/api/fulfilment/products/${encodeURIComponent(args.sku)}`,

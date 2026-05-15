@@ -20,12 +20,14 @@
  */
 
 import { QuiqupHttpError, type HttpMethod } from "./quiqup-lastmile";
-
-const BASE_URL = process.env.QUIQUP_FULFILMENT_BASE_URL ?? "https://platform-api.quiqup.com";
+import { getFulfilmentBaseUrl, type QuiqupEnvironment } from "./quiqup-env";
 
 export interface QuiqupFulfilmentClientOptions {
   jwt: string;
+  /** Explicit base URL override (e.g. for tests). Wins over `environment`. */
   baseUrl?: string;
+  /** Selects the cluster when `baseUrl` is not provided. Defaults to production. */
+  environment?: QuiqupEnvironment;
 }
 
 export class QuiqupFulfilmentClient {
@@ -36,7 +38,8 @@ export class QuiqupFulfilmentClient {
     path: string,
     init: { body?: unknown; query?: Record<string, string | number | undefined> } = {},
   ): Promise<unknown> {
-    const url = new URL(`${this.opts.baseUrl ?? BASE_URL}${path}`);
+    const base = this.opts.baseUrl ?? getFulfilmentBaseUrl(this.opts.environment);
+    const url = new URL(`${base}${path}`);
     if (init.query) {
       for (const [k, v] of Object.entries(init.query)) {
         if (v !== undefined) url.searchParams.set(k, String(v));

@@ -15,7 +15,7 @@
  * (2026-05-03); M4 will retroactively harden them.
  */
 
-const BASE_URL = process.env.QUIQUP_LASTMILE_BASE_URL ?? "https://api-ae.quiqup.com";
+import { getLastmileBaseUrl, type QuiqupEnvironment } from "./quiqup-env";
 
 export class QuiqupHttpError extends Error {
   constructor(
@@ -29,7 +29,10 @@ export class QuiqupHttpError extends Error {
 
 export interface QuiqupLastmileClientOptions {
   jwt: string;
+  /** Explicit base URL override (e.g. for tests). Wins over `environment`. */
   baseUrl?: string;
+  /** Selects the cluster when `baseUrl` is not provided. Defaults to production. */
+  environment?: QuiqupEnvironment;
 }
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -51,7 +54,8 @@ export class QuiqupLastmileClient {
     path: string,
     init: { body?: unknown; query?: Record<string, string | number | undefined> } = {},
   ): Promise<unknown> {
-    const url = new URL(`${this.opts.baseUrl ?? BASE_URL}${path}`);
+    const base = this.opts.baseUrl ?? getLastmileBaseUrl(this.opts.environment);
+    const url = new URL(`${base}${path}`);
     if (init.query) {
       for (const [k, v] of Object.entries(init.query)) {
         if (v !== undefined) url.searchParams.set(k, String(v));

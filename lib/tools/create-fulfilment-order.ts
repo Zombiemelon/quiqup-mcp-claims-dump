@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
 // Same fix as create_lastmile_order (2026-05-14): wide-open passthrough
@@ -41,6 +42,7 @@ const inputSchema = z
     payment_amount: z.number().optional(),
     partner_order_id: z.string().optional(),
     notes: z.string().optional(),
+    environment: environmentField,
   })
   .passthrough();
 
@@ -80,8 +82,10 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
   handler: async (auth, args) => {
     if (!auth.userId) throw new Error("create_fulfilment_order requires an authenticated user");
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupFulfilmentClient({ jwt });
-    const data = await client.request("POST", "/api/fulfilment/orders", { body: args });
+    const client = new QuiqupFulfilmentClient({ jwt, environment: args.environment });
+    const { environment: _env, ...upstreamBody } = args;
+    void _env;
+    const data = await client.request("POST", "/api/fulfilment/orders", { body: upstreamBody });
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };

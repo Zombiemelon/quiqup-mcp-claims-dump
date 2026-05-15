@@ -42,6 +42,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupLastmileClient } from "@/lib/clients/quiqup-lastmile";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 import { assertOrderBelongsToUser } from "@/lib/middleware/scope";
 
@@ -61,6 +62,7 @@ const inputSchema = z.object({
       // duplicate dispatch + double-billing.
       "Optional stable key per *logical* dispatch. Supplying it makes retries safe: a second call with the same key + same args (within 15 minutes, same warm instance) returns the cached prior result without re-dispatching the order. Use your own merchant-side reference (e.g. internal order id), NOT a random UUID per attempt — the whole point is that two retries share one key.",
     ),
+  environment: environmentField,
 });
 
 const outputSchema = z.object({}).passthrough();
@@ -102,7 +104,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     //    order envelope; we surface id + state back to the LLM so the
     //    caller can confirm the transition.
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupLastmileClient({ jwt });
+    const client = new QuiqupLastmileClient({ jwt, environment: args.environment });
 
     // QuiqupHttpError from any non-2xx flows up to the registerTool
     // wrapper, which maps it into a structured isError MCP result via

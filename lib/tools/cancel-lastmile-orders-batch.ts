@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupLastmileClient } from "@/lib/clients/quiqup-lastmile";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 import {
   assertOrderBelongsToUser,
@@ -23,6 +24,7 @@ import {
 const inputSchema = z.object({
   order_ids: z.array(z.string().min(1)).min(1).max(10),
   idempotency_key: z.string().optional(),
+  environment: environmentField,
 });
 
 const outputSchema = z.object({}).passthrough();
@@ -78,7 +80,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
 
     // 2. All ids in scope — fire the batch PUT.
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupLastmileClient({ jwt });
+    const client = new QuiqupLastmileClient({ jwt, environment: args.environment });
     const data = await client.request("PUT", "/orders/batch/set_cancelled", {
       body: { order_ids: args.order_ids },
     });

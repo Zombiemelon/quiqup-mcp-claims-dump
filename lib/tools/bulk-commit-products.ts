@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
 // Phase 2 of the two-phase bulk product upload, paired with
@@ -38,6 +39,7 @@ const inputSchema = z.object({
   // Optional but strongly recommended: the M6 wrapper de-duplicates same-key
   // calls inside the TTL window so an LLM retry storm can't double-commit.
   idempotency_key: z.string().optional(),
+  environment: environmentField,
 });
 
 const outputSchema = z.object({}).passthrough();
@@ -64,7 +66,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
   handler: async (auth, args) => {
     if (!auth.userId) throw new Error("bulk_commit_products requires an authenticated user");
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupFulfilmentClient({ jwt });
+    const client = new QuiqupFulfilmentClient({ jwt, environment: args.environment });
     const data = (await client.request(
       "POST",
       "/api/fulfilment/products/bulk_commit",

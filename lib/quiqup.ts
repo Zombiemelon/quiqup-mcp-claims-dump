@@ -25,8 +25,10 @@
  */
 
 import { createClerkClient } from "@clerk/backend";
-
-const QUIQUP_LASTMILE_BASE = "https://api-ae.quiqup.com";
+import {
+  getLastmileBaseUrl,
+  type QuiqupEnvironment,
+} from "@/lib/clients/quiqup-env";
 
 // Matches what Quiqdash sends (verified empirically in Clerk dashboard:
 // Sessions → JWT templates → "default" — claims include salesforceID etc.).
@@ -128,6 +130,7 @@ export async function quiqupLastmileGet<T = unknown>(
   path: string,
   query: Record<string, string | number>,
   userId: string,
+  environment: QuiqupEnvironment = "production",
 ): Promise<T> {
   if (!userId) {
     throw new Error(
@@ -144,7 +147,8 @@ export async function quiqupLastmileGet<T = unknown>(
 
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) qs.append(k, String(v));
-  const url = `${QUIQUP_LASTMILE_BASE}${path}${qs.size ? `?${qs.toString()}` : ""}`;
+  const base = getLastmileBaseUrl(environment);
+  const url = `${base}${path}${qs.size ? `?${qs.toString()}` : ""}`;
 
   const res = await fetch(url, {
     headers: {

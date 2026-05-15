@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { signLabelUrl, getAppBaseUrl } from "@/lib/signed-url";
+import { environmentField } from "@/lib/clients/quiqup-env";
 
 // 2026-05-14 (v2) — switched from inline base64 PDF (returned as a
 // `resource`+`blob` content block) to a signed download URL. claude.ai web
@@ -18,6 +19,7 @@ import { signLabelUrl, getAppBaseUrl } from "@/lib/signed-url";
 // just moves from the tool result to the download-route access log.
 const inputSchema = z.object({
   order_id: z.string().min(1, "order_id is required"),
+  environment: environmentField,
 });
 
 const outputSchema = z
@@ -46,6 +48,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       orderId: args.order_id,
       userId: auth.userId,
       baseUrl: getAppBaseUrl(),
+      environment: args.environment,
     });
 
     const expiresAt = new Date(exp * 1000).toISOString();

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupLastmileClient } from "@/lib/clients/quiqup-lastmile";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 import { assertOrderBelongsToUser } from "@/lib/middleware/scope";
 
@@ -17,6 +18,7 @@ const inputSchema = z.object({
   // `{userId, tool, idempotency_key}` so an LLM retry doesn't hit the
   // upstream DELETE twice. Absent = single-shot, no caching.
   idempotency_key: z.string().optional(),
+  environment: environmentField,
 });
 
 const outputSchema = z.object({}).passthrough();
@@ -43,7 +45,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     await assertOrderBelongsToUser(args.order_id, auth.userId);
 
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupLastmileClient({ jwt });
+    const client = new QuiqupLastmileClient({ jwt, environment: args.environment });
     const data = await client.request(
       "DELETE",
       `/orders/${encodeURIComponent(args.order_id)}/parcels/${encodeURIComponent(args.parcel_id)}`,

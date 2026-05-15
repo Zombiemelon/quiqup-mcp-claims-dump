@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupLastmileClient } from "@/lib/clients/quiqup-lastmile";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
 // TODO(M4): no cassette, no output schema, no error mapping. M3 thin
@@ -76,6 +77,7 @@ const inputSchema = z
     source: z.string().optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
     notes: z.string().optional(),
+    environment: environmentField,
   })
   .passthrough();
 
@@ -141,8 +143,10 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
   handler: async (auth, args) => {
     if (!auth.userId) throw new Error("create_lastmile_order requires an authenticated user");
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupLastmileClient({ jwt });
-    const data = await client.request("POST", "/orders", { body: args });
+    const client = new QuiqupLastmileClient({ jwt, environment: args.environment });
+    const { environment: _env, ...upstreamBody } = args;
+    void _env;
+    const data = await client.request("POST", "/orders", { body: upstreamBody });
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };

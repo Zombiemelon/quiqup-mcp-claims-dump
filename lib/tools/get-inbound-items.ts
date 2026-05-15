@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
 // TODO(M4): no cassette, no output schema, no error mapping.
@@ -8,6 +9,7 @@ import { getQuiqupReadyJwt } from "@/lib/quiqup";
 // the other inbound endpoints — Quiqup API inconsistency, preserved as-is.
 const inputSchema = z.object({
   inbound_id: z.string().min(1, "inbound_id is required"),
+  environment: environmentField,
 });
 
 const outputSchema = z.object({}).passthrough();
@@ -21,7 +23,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
   handler: async (auth, args) => {
     if (!auth.userId) throw new Error("get_inbound_items requires an authenticated user");
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupFulfilmentClient({ jwt });
+    const client = new QuiqupFulfilmentClient({ jwt, environment: args.environment });
     const data = await client.request(
       "GET",
       `/api/fulfilment/inbounds/${encodeURIComponent(args.inbound_id)}/items`,
