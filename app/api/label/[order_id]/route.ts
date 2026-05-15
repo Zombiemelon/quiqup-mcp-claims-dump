@@ -36,6 +36,10 @@ export async function GET(
     userId: url.searchParams.get("u"),
     exp: url.searchParams.get("exp"),
     sig: url.searchParams.get("sig"),
+    // Absent = production (matches the URL-shortening rule in signLabelUrl).
+    // `env` is part of the signed payload so a caller can't flip it after
+    // the URL is minted.
+    env: url.searchParams.get("env"),
   });
 
   if (!verdict.ok) {
@@ -56,7 +60,10 @@ export async function GET(
     );
   }
 
-  const client = new QuiqupLastmileClient({ jwt });
+  const client = new QuiqupLastmileClient({
+    jwt,
+    environment: verdict.environment,
+  });
   let data: { contentType?: string; base64?: string } | null;
   try {
     data = (await client.request(

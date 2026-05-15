@@ -90,9 +90,16 @@ export interface ToolSpec<
   description: string;
   inputSchema: TInput;
   outputSchema: TOutput;
+  // `z.input` instead of `z.infer` so fields with `.default()` (e.g. the
+  // shared `environmentField`) are typed as optional on the handler-args
+  // side — matching what callers/tests actually pass. The runtime safety
+  // net is the helper/client constructor defaulting `undefined` to
+  // production; the mcp-handler SDK may or may not parse defaults in
+  // (TODO(verify) above), so handlers must not depend on the field being
+  // pre-filled.
   handler: (
     auth: AuthContext,
-    args: z.infer<TInput>,
+    args: z.input<TInput>,
   ) => Promise<{
     // The full SDK content union, so tools can return text, image, resource,
     // or resource_link items — not just text. Widened 2026-05-14 in response
@@ -311,7 +318,7 @@ async function invokeWithGuardrails<
     isError?: boolean;
   }> => {
     try {
-      return await spec.handler(auth, args as z.infer<TIn>);
+      return await spec.handler(auth, args as z.input<TIn>);
     } catch (err) {
       if (err instanceof QuiqupHttpError) {
         return quiqupErrorToToolResult(err);

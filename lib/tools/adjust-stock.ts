@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { assertSkuBelongsToUser } from "@/lib/middleware/scope";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
@@ -47,6 +48,7 @@ const inputSchema = z.object({
       "Required to be `true` when `delta` is 0 — guards against the common LLM mistake of " +
         "omitting the actual quantity. Ignored when delta is non-zero.",
     ),
+  environment: environmentField,
 }).passthrough();
 
 const outputSchema = z.object({}).passthrough();
@@ -94,14 +96,15 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     await assertSkuBelongsToUser(args.sku, auth.userId);
 
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupFulfilmentClient({ jwt });
+    const client = new QuiqupFulfilmentClient({ jwt, environment: args.environment });
     // Forward the full args body — the upstream contract takes sku/bucket/
     // delta/reason and may accept additional fields (the schema is
     // passthrough-permissive). Strip our local-only flags so they don't
     // leak upstream and so cassettes diff cleanly.
-    const { idempotency_key: _ik, confirm_zero: _cz, ...upstreamBody } = args;
+    const { idempotency_key: _ik, confirm_zero: _cz, environment: _env, ...upstreamBody } = args;
     void _ik;
     void _cz;
+    void _env;
     const data = (await client.request(
       "POST",
       `/api/fulfilment/inventory/adjustments`,

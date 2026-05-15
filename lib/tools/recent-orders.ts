@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { quiqupLastmileGet } from "@/lib/quiqup";
 
 // Quiqup last-mile order lifecycle, roughly chronological. `pending` is the
@@ -79,6 +80,7 @@ export function registerRecentOrders(server: McpServer): void {
           .max(50)
           .default(5)
           .describe("Max orders to return (1-50). Default 5 keeps responses small."),
+        environment: environmentField,
       },
     },
     async (args, extra) => {
@@ -115,6 +117,7 @@ export function registerRecentOrders(server: McpServer): void {
           per_page: limit,
         },
         userId,
+        args.environment ?? "production",
       );
 
       // Project the raw response to a chat-friendly shape. The full Quiqup

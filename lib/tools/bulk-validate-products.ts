@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
 // M6: enabled. Validation-only — the upstream endpoint does NOT persist
@@ -15,6 +16,7 @@ const inputSchema = z.object({
   // multipart, but the JSON path is what platform-api exposes to API clients).
   file_base64: z.string().min(1, "file_base64 is required"),
   filename: z.string().min(1, "filename is required"),
+  environment: environmentField,
 });
 
 const outputSchema = z.object({}).passthrough();
@@ -40,7 +42,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     if (!auth.userId)
       throw new Error("bulk_validate_products requires an authenticated user");
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupFulfilmentClient({ jwt });
+    const client = new QuiqupFulfilmentClient({ jwt, environment: args.environment });
     const data = await client.request(
       "POST",
       "/api/fulfilment/products/bulk/validate",

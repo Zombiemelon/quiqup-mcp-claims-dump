@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
 // TODO(M4): no cassette, no output schema, no error mapping. M3 thin
@@ -15,6 +16,7 @@ const inputSchema = z.object({
     .number()
     .nonnegative("selling_price must be a non-negative number (in minor units, e.g. fils)"),
   currency: z.string().min(1, "currency is required (e.g. AED)"),
+  environment: environmentField,
 }).passthrough();
 
 const outputSchema = z.object({}).passthrough();
@@ -28,8 +30,10 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
   handler: async (auth, args) => {
     if (!auth.userId) throw new Error("create_product requires an authenticated user");
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupFulfilmentClient({ jwt });
-    const data = await client.request("POST", "/api/fulfilment/products", { body: args });
+    const client = new QuiqupFulfilmentClient({ jwt, environment: args.environment });
+    const { environment: _env, ...upstreamBody } = args;
+    void _env;
+    const data = await client.request("POST", "/api/fulfilment/products", { body: upstreamBody });
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };

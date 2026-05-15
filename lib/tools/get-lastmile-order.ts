@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupHttpError, QuiqupLastmileClient } from "@/lib/clients/quiqup-lastmile";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 
 // `order_id` is a string at the input boundary because URL path components
@@ -11,6 +12,7 @@ import { getQuiqupReadyJwt } from "@/lib/quiqup";
 // Flagged in 2026-05-03 review.
 const inputSchema = z.object({
   order_id: z.string().min(1, "order_id is required"),
+  environment: environmentField,
 });
 
 // Subset of fields we surface back to the LLM. Quiqup's response is large;
@@ -41,7 +43,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     // V3b same-IdP exchange: mint a Quiqup-shaped JWT from the Clerk userId
     // (mocked in tests via vi.mock("@/lib/quiqup")).
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupLastmileClient({ jwt });
+    const client = new QuiqupLastmileClient({ jwt, environment: args.environment });
 
     let response: { order: unknown };
     try {

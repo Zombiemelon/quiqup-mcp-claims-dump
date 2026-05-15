@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { QuiqupFulfilmentClient } from "@/lib/clients/quiqup-fulfilment";
+import { environmentField } from "@/lib/clients/quiqup-env";
 import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
 import { ScopeViolationError } from "@/lib/middleware/scope";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
@@ -15,6 +16,7 @@ const inputSchema = z
     inbound_id: z.string().min(1, "inbound_id is required"),
     slot_id: z.string().min(1, "slot_id is required (from list_inbound_slots)"),
     idempotency_key: z.string().optional(),
+    environment: environmentField,
   })
   .passthrough();
 
@@ -36,7 +38,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       throw new Error("book_inbound_slot requires an authenticated user");
     }
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const client = new QuiqupFulfilmentClient({ jwt });
+    const client = new QuiqupFulfilmentClient({ jwt, environment: args.environment });
 
     // TODO(M7): promote to a typed helper in scope.ts when a third tool needs it.
     // Ownership check — confirm the inbound is visible to this caller's JWT.
