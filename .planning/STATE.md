@@ -5,25 +5,25 @@
 ## Project Reference
 
 - **Core value:** Every backend endpoint that powers Quiqdash v3 must be reachable from an LLM via a single MCP server, with the same auth, the same error semantics, and the same observability as the existing staging-verified tools.
-- **Current focus:** Phase 1 — Account, Auth & Reference Data (auth/lookup substrate)
+- **Current focus:** Phase 2 — Integrations (Shopify/Salla/WooCommerce + shared surface)
 
 ## Current Position
 
-- **current_phase:** 2 (next)
-- **current_plan:** 02-01 (next)
-- **status:** phase-1-complete (awaiting gsd-verifier)
-- **progress:** Phase 1: 4/4 plans complete — phase ready for verifier
+- **current_phase:** 2
+- **current_plan:** 02-03 (next)
+- **status:** in-progress (Phase 2 Waves 1 + 2 complete; Shopify family landed)
+- **progress:** Phase 2: 2/6 plans complete — Salla/WooCommerce/Mintsoft/SBL still pending
 
 ```
-[█▋                  ] 8% (1/12 phases pending verifier) — Phase 1 4/4 plans
+[██                  ] 12% (Phase 1 complete + Phase 2 2/6 plans)
 ```
 
 ## Performance Metrics
 
-- Phases completed: 0 (Phase 1 awaiting verifier)
-- Plans completed: 4 (01-01, 01-02, 01-03, 01-04)
-- Requirements shipped (v1): see REQUIREMENTS.md (01-04 ships no new REQ-IDs; only eval coverage)
-- Service-host families with Langfuse eval: 4 (Platform/lastmile via create_lastmile_order, Fulfilment via baseline, Platform-reads via get_account [new 01-04], Google Places via lookup_google_place [new 01-04])
+- Phases completed: 1 (Phase 1)
+- Plans completed: 6 (01-01..01-04, 02-01, 02-02)
+- Requirements shipped (v1): see REQUIREMENTS.md (02-02 adds INTG-07/08/09/10/11/12)
+- Service-host families with Langfuse eval: 4 (Platform/lastmile via create_lastmile_order, Fulfilment via baseline, Platform-reads via get_account, Google Places via lookup_google_place)
 
 ### Plan Execution Log
 
@@ -33,6 +33,8 @@
 | 01    | 02   | ~       | ~     | ~     | 2026-05-19 |
 | 01    | 03   | ~12m    | 3     | 8     | 2026-05-19 |
 | 01    | 04   | ~10m    | 3     | 8     | 2026-05-19 |
+| 02    | 01   | ~25m    | 3     | 8     | 2026-05-19 |
+| 02    | 02   | ~10m    | 3     | 9     | 2026-05-19 |
 
 ## Accumulated Context
 
@@ -48,6 +50,10 @@
 - 2026-05-19 (01-04): Evals import production `spec.description` directly (no inline copies) — drift between live tool description and eval-time description is structurally impossible. Replaces the `recent-orders.ts` maintenance-comment pattern.
 - 2026-05-19 (01-04): `auth-isolation` scorer in `score-lookup-google-place.ts` strips line + block comments before substring-checking — both `lib/tools/lookup-google-place.ts` and `lib/clients/google-places.ts` legitimately mention `getQuiqupReadyJwt` in header comments to document the auth-exception (the very thing the scorer locks in).
 - 2026-05-19 (01-04): New `.github/workflows/eval-gate.yml` is distinct from `evals.yml` (lastmile suite, staging side effects). eval-gate.yml runs tool-surface + the two new family evals; lastmile remains gated in evals.yml to avoid duplicated CI secret usage.
+- 2026-05-19 (02-02): `setup_shopify_callback` POSTs with all 3 params (shop_name, code, is_fulfillment) on the QUERY STRING — no JSON body. Description grep-locks the "single-use" OAuth-code warning per T-02-13; test asserts the empty body + absent Content-Type header.
+- 2026-05-19 (02-02): `update_shopify_connection.token` marked SENSITIVE in the tool description (T-02-12); audit middleware already redacts the `token` key via ALWAYS_REDACT_KEYS at the at-rest layer; description-quality grep-lock prevents the wording from regressing.
+- 2026-05-19 (02-02): `update_shopify_connection` rate limit set to 5/min (matching create_account_team_member privilege-escalation guardrail) — connection-credential mutations should be rare; rapid-fire calls almost certainly indicate misuse.
+- 2026-05-19 (02-02): `update_shopify_config.wms_delay_minutes` bounded to [0, 10080] (1 week) per T-02-14 — prevents an LLM from setting an effectively-infinite delay that would freeze WMS pickup.
 
 ### Todos
 
@@ -59,9 +65,9 @@
 
 ## Session Continuity
 
-- **Last session:** 2026-05-19 — completed Plan 01-04 (Langfuse eval coverage for Platform reads + Google Places). 2 new evals (get-account, lookup-google-place), 5 scorers each, new `.github/workflows/eval-gate.yml`. All 378 vitest tests + tsc + dry-runs green. Phase 1 is now 4/4 plans complete — handing off to gsd-verifier.
-- **Next session:** Run gsd-verifier on Phase 1 as a whole; then `/gsd:execute-plan 02-01` (Phase 2: Integrations).
+- **Last session:** 2026-05-19 — completed Plan 02-02 (Shopify integration: 6 tools — INTG-07/08/09/10/11/12). Reads use encodeURIComponent + URLSearchParams; writes carry BL-01 guardrails (rateLimit + idempotency + audit:true); setup_shopify_callback description locks in the single-use OAuth-code warning; update_shopify_connection description marks token SENSITIVE — both pinned by description-quality grep assertions in the 20-test MSW suite. Tool-surface snapshot 64 → 70 enabled, full `pnpm test` green (418/421 — 3 pre-existing skips), `EVAL_GATE=1 bun run eval:tool-surface` clean.
+- **Next session:** `/gsd:execute-plan 02-03` (Phase 2 Wave 3 — Salla family).
 
 ---
 *State initialized: 2026-05-19*
-*Last updated: 2026-05-19 (post 01-04 execution — Phase 1 complete)*
+*Last updated: 2026-05-19 (post 02-02 execution — Shopify family complete)*

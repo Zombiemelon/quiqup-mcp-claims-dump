@@ -43,12 +43,12 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 - [ ] **INTG-04**: `repair_integration_orders` — `POST /integrations/repair-orders` (Platform)
 - [ ] **INTG-05**: `get_integration_order` — `GET /order/{orderUUID}` (Platform)
 - [ ] **INTG-06**: `confirm_ff_export` — `POST /orders/confirm-ff-export` (Platform)
-- [ ] **INTG-07**: `get_shopify_config` — `GET /shopify/config/{shopName}` (Platform)
-- [ ] **INTG-08**: `list_shopify_delivery_methods` — `GET /shopify/delivery-methods` (Platform)
-- [ ] **INTG-09**: `list_shopify_locations` — `GET /shopify/locations` (Platform)
-- [ ] **INTG-10**: `update_shopify_config` — `PUT /shopify/config` (Platform)
-- [ ] **INTG-11**: `update_shopify_connection` — `PUT /shopify/connection` (Platform)
-- [ ] **INTG-12**: `setup_shopify_callback` — `POST /shopify/callback` (Platform) — OAuth completion
+- [x] **INTG-07**: `get_shopify_config` — `GET /shopify/config/{shopName}` (Platform)
+- [x] **INTG-08**: `list_shopify_delivery_methods` — `GET /shopify/delivery-methods` (Platform)
+- [x] **INTG-09**: `list_shopify_locations` — `GET /shopify/locations` (Platform)
+- [x] **INTG-10**: `update_shopify_config` — `PUT /shopify/config` (Platform)
+- [x] **INTG-11**: `update_shopify_connection` — `PUT /shopify/connection` (Platform)
+- [x] **INTG-12**: `setup_shopify_callback` — `POST /shopify/callback` (Platform) — OAuth completion
 - [ ] **INTG-13**: `list_woocommerce_connections` — `GET /woocommerce/connections` (Platform)
 - [ ] **INTG-14**: `get_woocommerce_config` — `GET /woocommerce/config/{siteName}` (Platform)
 - [ ] **INTG-15**: `list_woocommerce_states` — `GET /woocommerce/states` (Platform)
@@ -309,12 +309,12 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | INTG-04 | Phase 2 | Pending |
 | INTG-05 | Phase 2 | Pending |
 | INTG-06 | Phase 2 | Pending |
-| INTG-07 | Phase 2 | Pending |
-| INTG-08 | Phase 2 | Pending |
-| INTG-09 | Phase 2 | Pending |
-| INTG-10 | Phase 2 | Pending |
-| INTG-11 | Phase 2 | Pending |
-| INTG-12 | Phase 2 | Pending |
+| INTG-07 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-08 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-09 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-10 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-11 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-12 | Phase 2 / 02-02 | Complete (2026-05-19) |
 | INTG-13 | Phase 2 | Pending |
 | INTG-14 | Phase 2 | Pending |
 | INTG-15 | Phase 2 | Pending |
