@@ -277,7 +277,12 @@ describe("delete_salla_connection", () => {
 
   it("[3] confirm: true + dry_run: true → preview, NO upstream DELETE", async () => {
     let deleteCount = 0;
+    // BL-03 source-check pre-flight needs a GET handler returning a Salla
+    // connection so the dry-run reaches the preview branch.
     server.use(
+      http.get(`${PLATFORM}/integrations/connections/:rest*`, () =>
+        HttpResponse.json({ connection: { source: "salla" } }),
+      ),
       http.delete(`${PLATFORM}/integrations/connections/:rest*`, () => {
         deleteCount += 1;
         return HttpResponse.json({});
@@ -297,7 +302,7 @@ describe("delete_salla_connection", () => {
     const parsed = JSON.parse(first.text) as Record<string, unknown>;
     expect(parsed.ok).toBe(true);
     expect(parsed.dry_run).toBe(true);
-    expect(parsed.would_delete).toEqual({ id: "c-abc123" });
+    expect(parsed.would_delete).toEqual({ id: "c-abc123", source: "salla" });
     expect(typeof parsed.note).toBe("string");
   });
 
@@ -307,6 +312,9 @@ describe("delete_salla_connection", () => {
     let capturedMethod: string | undefined;
     let capturedBody: string | undefined;
     server.use(
+      http.get(`${PLATFORM}/integrations/connections/:rest*`, () =>
+        HttpResponse.json({ connection: { source: "salla" } }),
+      ),
       http.delete(
         `${PLATFORM}/integrations/connections/:rest*`,
         async ({ request }) => {
@@ -365,5 +373,65 @@ describe("delete_salla_connection", () => {
       }),
     ).rejects.toThrow(/authenticated user/);
     expect(deleteCount).toBe(0);
+  });
+
+  // 02-REVIEW BL-03: refuse to delete a non-Salla connection even with
+  // confirm:true. The upstream DELETE endpoint is family-agnostic, so the
+  // tool's "Salla" scope is enforced here by the pre-flight GET.
+  it("[6] non-Salla connection (source=shopify) → isError, NO upstream DELETE", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.get(`${PLATFORM}/integrations/connections/:rest*`, () =>
+        HttpResponse.json({
+          connection: { id: "c-abc123", source: "shopify", shop_name: "acme" },
+        }),
+      ),
+      http.delete(`${PLATFORM}/integrations/connections/:rest*`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-salla-connection");
+    const result = await mod.spec.handler(auth, {
+      id: "c-abc123",
+      confirm: true,
+      environment: "production",
+    });
+    expect(deleteCount).toBe(0);
+    expect((result as { isError?: boolean }).isError).toBe(true);
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    expect(first.text).toContain("refused");
+    expect(first.text).toContain("source=shopify");
+    expect(first.text).toContain("delete_integration_source");
+  });
+
+  // 02-REVIEW BL-03: dry-run honours the source-check too — an LLM cannot get
+  // a green "would_delete" preview for a non-Salla connection.
+  it("[7] dry_run on non-Salla connection → isError, NO upstream DELETE", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.get(`${PLATFORM}/integrations/connections/:rest*`, () =>
+        HttpResponse.json({
+          connection: { id: "c-abc123", source: "woocommerce" },
+        }),
+      ),
+      http.delete(`${PLATFORM}/integrations/connections/:rest*`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-salla-connection");
+    const result = await mod.spec.handler(auth, {
+      id: "c-abc123",
+      confirm: true,
+      dry_run: true,
+      environment: "production",
+    });
+    expect(deleteCount).toBe(0);
+    expect((result as { isError?: boolean }).isError).toBe(true);
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    expect(first.text).toContain("source=woocommerce");
   });
 });

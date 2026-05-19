@@ -130,7 +130,58 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       throw err;
     }
 
-    // 3. Dry-run short-circuit — runs AFTER confirm.
+    // 3. Source-scope pre-flight (02-REVIEW BL-03): this tool deletes Salla
+    //    connections only. The upstream endpoint
+    //    `DELETE /integrations/connections/{id}` is FAMILY-AGNOSTIC — it will
+    //    happily delete a Shopify or WooCommerce connection if the LLM (or
+    //    an upstream copy-paste error) supplied the wrong id. The tool name,
+    //    description, and confirmation echo all imply Salla scope; this
+    //    pre-flight enforces it.
+    //
+    //    The pre-flight runs BEFORE the dry-run short-circuit so a dry-run
+    //    preview also fails when the id resolves to a non-Salla connection.
+    //    Cost: one extra GET; the tool is rate-limited to 3/min anyway. Also
+    //    serves as a JWT-bridge exercise (compare 02-REVIEW WR-04: the
+    //    previous dry-run path skipped the bridge entirely).
+    const jwt = await getQuiqupReadyJwt(auth.userId);
+    const platformApiBase = getPlatformApiBaseUrl(args.environment);
+
+    const preRes = await fetch(
+      `${platformApiBase}/integrations/connections/${encodeURIComponent(args.id)}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          Accept: "application/json",
+        },
+      },
+    );
+    if (!preRes.ok) {
+      // Forward 404 / 401 / etc. unchanged so the LLM sees the canonical
+      // upstream error path.
+      throw new QuiqupHttpError(preRes.status, await preRes.text());
+    }
+    const peek = (await preRes.json()) as {
+      connection?: { source?: string };
+    };
+    const peekSource = peek.connection?.source;
+    if (peekSource !== "salla") {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text:
+              `delete_salla_connection refused: connection ${args.id} has source=${String(peekSource)}, ` +
+              `not 'salla'. NO upstream DELETE was issued. ` +
+              `Use delete_integration_source({ source: "${String(peekSource)}", shop_name: <...> }) instead, ` +
+              `or verify the id via list_integration_connections.`,
+          },
+        ],
+      };
+    }
+
+    // 4. Dry-run short-circuit — runs AFTER confirm + source-check.
     if (isDryRun(args)) {
       return {
         content: [
@@ -140,7 +191,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
               {
                 ok: true,
                 dry_run: true,
-                would_delete: { id: args.id },
+                would_delete: { id: args.id, source: "salla" },
                 note:
                   "No upstream DELETE was issued because dry_run=true. " +
                   "Re-call with dry_run:false (or omit dry_run) to perform " +
@@ -154,9 +205,8 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       };
     }
 
-    // 4. Live destructive path — mint JWT, fire DELETE.
-    const jwt = await getQuiqupReadyJwt(auth.userId);
-    const platformApiBase = getPlatformApiBaseUrl(args.environment);
+    // 5. Live destructive path — fire DELETE (jwt + platformApiBase already
+    //    minted above for the source-check pre-flight).
     const res = await fetch(
       `${platformApiBase}/integrations/connections/${encodeURIComponent(args.id)}`,
       {
@@ -172,7 +222,7 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       throw new QuiqupHttpError(res.status, await res.text());
     }
 
-    // 5. Synthesize a structured echo — upstream returns empty per source-doc.
+    // 6. Synthesize a structured echo — upstream returns empty per source-doc.
     return {
       content: [
         {
