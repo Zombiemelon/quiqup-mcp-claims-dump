@@ -63,6 +63,14 @@ import { spec as repairIntegrationOrdersSpec } from "@/lib/tools/repair-integrat
 import { spec as getIntegrationOrderSpec } from "@/lib/tools/get-integration-order";
 import { spec as confirmFfExportSpec } from "@/lib/tools/confirm-ff-export";
 
+// Phase 2: Shopify integration (INTG-07/08/09/10/11/12).
+import { spec as getShopifyConfigSpec } from "@/lib/tools/get-shopify-config";
+import { spec as listShopifyDeliveryMethodsSpec } from "@/lib/tools/list-shopify-delivery-methods";
+import { spec as listShopifyLocationsSpec } from "@/lib/tools/list-shopify-locations";
+import { spec as updateShopifyConfigSpec } from "@/lib/tools/update-shopify-config";
+import { spec as updateShopifyConnectionSpec } from "@/lib/tools/update-shopify-connection";
+import { spec as setupShopifyCallbackSpec } from "@/lib/tools/setup-shopify-callback";
+
 // M3 thin pass-through enabled writes.
 // TODO(M4): cassette + output schemas + error mapping for these.
 // TODO(M6): retroactive scope/audit/idempotency guardrails.
@@ -155,6 +163,14 @@ const handler = createMcpHandler(
     registerTool(server, repairIntegrationOrdersSpec);
     registerTool(server, getIntegrationOrderSpec);
     registerTool(server, confirmFfExportSpec);
+
+    // -- Phase 2: Shopify integration (INTG-07/08/09/10/11/12) --
+    registerTool(server, getShopifyConfigSpec);
+    registerTool(server, listShopifyDeliveryMethodsSpec);
+    registerTool(server, listShopifyLocationsSpec);
+    registerTool(server, updateShopifyConfigSpec);
+    registerTool(server, updateShopifyConnectionSpec);
+    registerTool(server, setupShopifyCallbackSpec);
 
     // -- M3 enabled writes: thin pass-through (TODO(M4)/M6 hardening) --
     registerTool(server, createLastmileOrderSpec);
