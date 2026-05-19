@@ -113,6 +113,10 @@ import { spec as bookInboundSlotSpec } from "@/lib/tools/book-inbound-slot";
 import { spec as bulkValidateProductsSpec } from "@/lib/tools/bulk-validate-products";
 import { spec as bulkCommitProductsSpec } from "@/lib/tools/bulk-commit-products";
 
+// Phase 3 / Wave 1: Orders read path — Orders Core GraphQL family (ORDL-02/03).
+import { spec as lookupOrdersIdsSpec } from "@/lib/tools/lookup-orders-ids";
+import { spec as bulkOrdersLookupSpec } from "@/lib/tools/bulk-orders-lookup";
+
 // Staging-only state-machine helpers (Postman: Quiqup Staging State Change).
 // Each pins `environment: z.literal("staging")` at the input schema, so any
 // non-staging call is rejected by the validator before the handler runs.
@@ -230,6 +234,10 @@ const handler = createMcpHandler(
     registerTool(server, bookInboundSlotSpec);
     registerTool(server, bulkValidateProductsSpec);
     registerTool(server, bulkCommitProductsSpec);
+
+    // -- Phase 3: Orders read path — Orders Core GraphQL family (ORDL-02/03) --
+    registerTool(server, lookupOrdersIdsSpec);
+    registerTool(server, bulkOrdersLookupSpec);
 
     // -- Staging-only state-machine helpers (env pinned in the schema) --
     registerTool(server, setOutForDeliveryBatchSpec);
