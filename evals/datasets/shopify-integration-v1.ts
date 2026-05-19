@@ -20,7 +20,8 @@
  *   list_shopify_delivery_methods   — { shop_name, environment? }
  *   list_shopify_locations          — { shop_name, environment? }
  *   update_shopify_config           — { shop_name, ...partial, environment? }
- *   update_shopify_connection       — { shop_name, code, is_fulfillment, token, user_id, environment? }
+ *   update_shopify_connection       — { shop_name, code, is_fulfillment, token, environment? }
+ *                                       (02-REVIEW BL-04: `user_id` is server-bound — not a caller arg)
  *   setup_shopify_callback          — { shop_name, code, is_fulfillment, environment? }
  */
 
@@ -98,8 +99,9 @@ export const items: ShopifyIntegrationItem[] = [
   },
   {
     input: {
+      // 02-REVIEW BL-04: user_id is server-bound (auth.userId) — not a caller arg.
       request:
-        "Update the shopify connection credentials for acme-store using token TOK, code XYZ, as fulfillment, user_id u_123.",
+        "Update the shopify connection credentials for acme-store using token TOK, code XYZ, as fulfillment.",
     },
     expectedOutput: {
       tool: "update_shopify_connection",
@@ -108,7 +110,6 @@ export const items: ShopifyIntegrationItem[] = [
         code: "XYZ",
         token: "TOK",
         is_fulfillment: true,
-        user_id: "u_123",
       },
     },
   },

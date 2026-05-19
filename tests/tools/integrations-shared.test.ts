@@ -184,7 +184,6 @@ describe("list_integration_order_reasons", () => {
       status: "failed",
       start_date: "2026-05-01T00:00:00Z",
       end_date: "2026-05-19T00:00:00Z",
-      user_id: "u_123",
       limit: 50,
       offset: 0,
       environment: "production",
@@ -198,7 +197,8 @@ describe("list_integration_order_reasons", () => {
     expect(captured!.searchParams.get("end_date")).toBe(
       "2026-05-19T00:00:00Z",
     );
-    expect(captured!.searchParams.get("user_id")).toBe("u_123");
+    // 02-REVIEW BL-04: user_id is server-bound to auth.userId, not caller-supplied.
+    expect(captured!.searchParams.get("user_id")).toBe(auth.userId);
     expect(captured!.searchParams.get("limit")).toBe("50");
     expect(captured!.searchParams.get("offset")).toBe("0");
 
@@ -223,7 +223,6 @@ describe("list_integration_order_reasons", () => {
         status: "failed",
         start_date: "2026-05-01T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
-        user_id: "u_123",
         limit: 50,
         offset: 0,
         environment: "production",
@@ -239,7 +238,6 @@ describe("list_integration_order_reasons", () => {
         status: "failed",
         start_date: "2026-05-01T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
-        user_id: "u_123",
         limit: 50,
         offset: 0,
         environment: "production",
@@ -249,12 +247,13 @@ describe("list_integration_order_reasons", () => {
 
   it("schema rejects limit:500 (max 200) and limit:0 (min 1)", async () => {
     const mod = await import("../../lib/tools/list-integration-order-reasons");
+    // 02-REVIEW BL-04: user_id is not in the input schema anymore — it's
+    // server-bound to auth.userId at runtime.
     const base = {
       sales_channel: "shopify",
       status: "failed",
       start_date: "2026-05-01T00:00:00Z",
       end_date: "2026-05-19T00:00:00Z",
-      user_id: "u_123",
       offset: 0,
     };
     expect(
@@ -295,7 +294,6 @@ describe("repair_integration_orders", () => {
       shop_name: "acme",
       site_url: "https://acme.myshopify.com",
       source: "shopify",
-      user_id: "u_123",
       start_date: "2026-05-01T00:00:00Z",
       end_date: "2026-05-19T00:00:00Z",
       idempotency_key: "idem_abc",
@@ -305,6 +303,8 @@ describe("repair_integration_orders", () => {
     expect(captured!.ids).toEqual(["i1", "i2"]);
     expect(captured!.source).toBe("shopify");
     expect(captured!.order_name).toBe("#1234");
+    // 02-REVIEW BL-04: user_id is server-bound to auth.userId, not caller-supplied.
+    expect(captured!.user_id).toBe(auth.userId);
     // idempotency_key + environment are tool-level — must not be forwarded.
     expect(captured).not.toHaveProperty("idempotency_key");
     expect(captured).not.toHaveProperty("environment");
@@ -331,7 +331,6 @@ describe("repair_integration_orders", () => {
         shop_name: "acme",
         site_url: "https://acme.myshopify.com",
         source: "shopify",
-        user_id: "u_123",
         start_date: "2026-05-01T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
         environment: "production",
@@ -348,7 +347,6 @@ describe("repair_integration_orders", () => {
         shop_name: "acme",
         site_url: "https://acme.myshopify.com",
         source: "shopify",
-        user_id: "u_123",
         start_date: "2026-05-01T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
         environment: "production",
@@ -359,6 +357,7 @@ describe("repair_integration_orders", () => {
   it("schema rejects 51 ids (max 50) and non-enum source", async () => {
     const mod = await import("../../lib/tools/repair-integration-orders");
     const tooManyIds = Array.from({ length: 51 }, (_, i) => `id_${i}`);
+    // 02-REVIEW BL-04: user_id is server-bound, not in the input schema.
     expect(
       mod.spec.inputSchema.safeParse({
         ids: tooManyIds,
@@ -366,7 +365,6 @@ describe("repair_integration_orders", () => {
         shop_name: "acme",
         site_url: "https://acme.myshopify.com",
         source: "shopify",
-        user_id: "u_123",
         start_date: "2026-05-01T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
       }).success,
@@ -378,11 +376,44 @@ describe("repair_integration_orders", () => {
         shop_name: "acme",
         site_url: "https://acme.myshopify.com",
         source: "magento",
-        user_id: "u_123",
         start_date: "2026-05-01T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
       }).success,
     ).toBe(false);
+  });
+
+  // 02-REVIEW BL-04: caller-supplied user_id in args is IGNORED — the handler
+  // binds to auth.userId. Defends against cross-tenant repair attempts.
+  it("user_id is server-bound (BL-04): handler ignores caller-supplied user_id", async () => {
+    let captured: Record<string, unknown> | undefined;
+    server.use(
+      http.post(
+        `${PLATFORM}/integrations/repair-orders`,
+        async ({ request }) => {
+          captured = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({
+            orders_processed: 1,
+            orders_created: 1,
+            message: "ok",
+            errors: [],
+          });
+        },
+      ),
+    );
+    const mod = await import("../../lib/tools/repair-integration-orders");
+    await mod.spec.handler(auth, {
+      ids: ["i1"],
+      order_name: "#1234",
+      shop_name: "acme",
+      site_url: "https://acme.myshopify.com",
+      source: "shopify",
+      ...({ user_id: "u_attacker" } as unknown as Record<string, never>),
+      start_date: "2026-05-01T00:00:00Z",
+      end_date: "2026-05-19T00:00:00Z",
+      environment: "production",
+    });
+    expect(captured!.user_id).toBe(auth.userId);
+    expect(captured!.user_id).not.toBe("u_attacker");
   });
 });
 

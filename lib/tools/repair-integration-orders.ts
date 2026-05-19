@@ -60,12 +60,11 @@ const inputSchema = z.object({
       "Source channel — must match what `list_integration_connections` " +
         "returns for this shop.",
     ),
-  user_id: z
-    .string()
-    .min(1)
-    .describe(
-      "Partner user id — same value used by `list_integration_order_reasons`.",
-    ),
+  // NOTE: `user_id` is intentionally NOT a caller arg (02-REVIEW BL-04). The
+  // handler binds it to `auth.userId` server-side from the JWT subject so an
+  // LLM cannot supply a foreign user_id and have repair-orders mutate another
+  // tenant's records. The upstream body still receives `user_id`; the LLM
+  // doesn't get to choose its value.
   start_date: z
     .string()
     .describe(
@@ -102,9 +101,11 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     "Error modes: 401/403 → auth issue (run `whoami_platform`); 422 → " +
     "validation failure (inspect body — typically a bad source value or " +
     "date range); 5xx → upstream temporarily unavailable, retry. " +
+    "Owner identity: the upstream `user_id` is BOUND server-side to the " +
+    "authenticated JWT subject — there is no caller arg for it (02-REVIEW BL-04). " +
     'Example: `{ "ids": ["12345", "12346"], "order_name": "#1234", ' +
     '"shop_name": "acme", "site_url": "https://acme.myshopify.com", ' +
-    '"source": "shopify", "user_id": "u_123", ' +
+    '"source": "shopify", ' +
     '"start_date": "2026-05-01T00:00:00Z", ' +
     '"end_date": "2026-05-19T00:00:00Z" }`.',
   inputSchema,
@@ -129,13 +130,15 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     // Build the upstream body from input fields only — explicitly omit
     // `idempotency_key` and `environment` (those are tool-level concerns,
     // not upstream API fields).
+    // `user_id` is BOUND to auth.userId server-side (02-REVIEW BL-04) — the
+    // JWT subject is the canonical owner identity for repair operations.
     const body = {
       ids: args.ids,
       order_name: args.order_name,
       shop_name: args.shop_name,
       site_url: args.site_url,
       source: args.source,
-      user_id: args.user_id,
+      user_id: auth.userId,
       start_date: args.start_date,
       end_date: args.end_date,
     };

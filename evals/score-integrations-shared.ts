@@ -11,9 +11,11 @@
  *
  *   2. required-fields-present (0..1) — per-tool rules:
  *        repair_integration_orders → ids + order_name + shop_name + site_url +
- *                                    source + user_id + start_date + end_date
+ *                                    source + start_date + end_date
  *        list_integration_order_reasons → sales_channel + status + start_date +
- *                                         end_date + user_id + limit + offset
+ *                                         end_date + limit + offset
+ *      (`user_id` is intentionally excluded per 02-REVIEW BL-04 — server-bound
+ *       to auth.userId, not a caller-supplied arg)
  *        get_integration_order → order_uuid
  *        confirm_ff_export → order_uuid
  *        list_integration_connections → no required fields (environment defaults)
@@ -60,12 +62,14 @@ export const argsOverlap: Evaluator = async (ctx) => {
  */
 const REQUIRED_FIELDS: Record<string, readonly string[]> = {
   list_integration_connections: [],
+  // 02-REVIEW BL-04: `user_id` is server-bound to auth.userId and is NOT a
+  // caller-supplied arg. Removed from the required-field set so the eval
+  // does not encourage the LLM to invent or smuggle a user_id.
   list_integration_order_reasons: [
     "sales_channel",
     "status",
     "start_date",
     "end_date",
-    "user_id",
     "limit",
     "offset",
   ],
@@ -75,7 +79,6 @@ const REQUIRED_FIELDS: Record<string, readonly string[]> = {
     "shop_name",
     "site_url",
     "source",
-    "user_id",
     "start_date",
     "end_date",
   ],

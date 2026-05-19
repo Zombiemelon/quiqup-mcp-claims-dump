@@ -14,8 +14,9 @@
  *
  * Tool-side reference (lib/tools/*.ts):
  *   list_integration_connections   — { environment? }
- *   list_integration_order_reasons — { sales_channel, status, start_date, end_date, user_id, limit, offset, environment? }
- *   repair_integration_orders      — { ids[], order_name, shop_name, site_url, source, user_id, start_date, end_date, idempotency_key?, environment? }
+ *   list_integration_order_reasons — { sales_channel, status, start_date, end_date, limit, offset, environment? }
+ *   repair_integration_orders      — { ids[], order_name, shop_name, site_url, source, start_date, end_date, idempotency_key?, environment? }
+ *   (02-REVIEW BL-04: `user_id` is server-bound — not a caller arg.)
  *   get_integration_order          — { order_uuid, environment? }
  *   confirm_ff_export              — { order_uuid, idempotency_key?, environment? }
  *
@@ -60,6 +61,8 @@ export const items: IntegrationsSharedItem[] = [
       request:
         "What integration orders failed in the last 24 hours on my shopify store? My user id is u_123.",
     },
+    // 02-REVIEW BL-04: user_id is server-bound (auth.userId) and is NOT a
+    // caller-supplied arg, so it does not appear in expectedOutput.args.
     expectedOutput: {
       tool: "list_integration_order_reasons",
       args: {
@@ -67,7 +70,6 @@ export const items: IntegrationsSharedItem[] = [
         status: "failed",
         start_date: "2026-05-18T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
-        user_id: "u_123",
         limit: 50,
         offset: 0,
       },
@@ -76,7 +78,7 @@ export const items: IntegrationsSharedItem[] = [
   {
     input: {
       request:
-        "Retry failed integration orders with ids a, b, c on the acme shopify shop https://acme.myshopify.com. The order_name is '#1234', user_id is u_123, window 2026-05-01 through 2026-05-19.",
+        "Retry failed integration orders with ids a, b, c on the acme shopify shop https://acme.myshopify.com. The order_name is '#1234', window 2026-05-01 through 2026-05-19.",
     },
     expectedOutput: {
       tool: "repair_integration_orders",
@@ -86,7 +88,6 @@ export const items: IntegrationsSharedItem[] = [
         shop_name: "acme",
         site_url: "https://acme.myshopify.com",
         source: "shopify",
-        user_id: "u_123",
         start_date: "2026-05-01T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
       },
@@ -113,7 +114,7 @@ export const items: IntegrationsSharedItem[] = [
   {
     input: {
       request:
-        "Pull the failed-orders triage list for woocommerce, status pending, user_id u_555, between 2026-05-10 and 2026-05-19, give me 100 rows.",
+        "Pull the failed-orders triage list for woocommerce, status pending, between 2026-05-10 and 2026-05-19, give me 100 rows.",
     },
     expectedOutput: {
       tool: "list_integration_order_reasons",
@@ -122,7 +123,6 @@ export const items: IntegrationsSharedItem[] = [
         status: "pending",
         start_date: "2026-05-10T00:00:00Z",
         end_date: "2026-05-19T00:00:00Z",
-        user_id: "u_555",
         limit: 100,
         offset: 0,
       },

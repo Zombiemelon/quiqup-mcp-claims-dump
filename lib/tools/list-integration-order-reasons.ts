@@ -72,13 +72,11 @@ const inputSchema = z.object({
   end_date: z
     .string()
     .describe("ISO-8601 date-time exclusive upper bound."),
-  user_id: z
-    .string()
-    .min(1)
-    .describe(
-      "Partner user id — use the value returned by `get_account` if you " +
-        "don't already have it.",
-    ),
+  // NOTE: `user_id` is intentionally NOT a caller arg (02-REVIEW BL-04). The
+  // handler binds it to `auth.userId` server-side from the JWT subject so
+  // this read tool cannot be used to enumerate failure-reason rows owned by
+  // a different tenant. The upstream query string still receives `user_id`;
+  // the LLM doesn't get to choose its value.
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
   environment: environmentField,
@@ -103,12 +101,14 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     "All 7 filter args are REQUIRED upstream (sales_channel, status, " +
     "start_date, end_date, user_id, limit, offset). `limit` is capped at " +
     "200 client-side to bound response size. " +
+    "Owner identity: the upstream `user_id` filter is BOUND server-side to the " +
+    "authenticated JWT subject — there is no caller arg for it (02-REVIEW BL-04). " +
     "Error modes: 401/403 → auth issue (run `whoami_platform`); 422 → " +
     "validation failure (likely bad date format — must be ISO-8601 " +
     "date-time); 5xx → upstream temporarily unavailable, retry. " +
     'Example: `{ "sales_channel": "shopify", "status": "failed", ' +
     '"start_date": "2026-05-01T00:00:00Z", "end_date": ' +
-    '"2026-05-19T00:00:00Z", "user_id": "u_123", "limit": 50, "offset": 0 }`.',
+    '"2026-05-19T00:00:00Z", "limit": 50, "offset": 0 }`.',
   inputSchema,
   outputSchema,
   handler: async (auth, args) => {
@@ -133,7 +133,9 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     url.searchParams.set("status", args.status);
     url.searchParams.set("start_date", args.start_date);
     url.searchParams.set("end_date", args.end_date);
-    url.searchParams.set("user_id", args.user_id);
+    // `user_id` is BOUND to auth.userId server-side (02-REVIEW BL-04) so the
+    // LLM cannot enumerate another tenant's failure-reason rows.
+    url.searchParams.set("user_id", auth.userId);
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
 

@@ -55,12 +55,12 @@ const REQUIRED_FIELDS: Record<string, readonly string[]> = {
   list_shopify_delivery_methods: ["shop_name"],
   list_shopify_locations: ["shop_name"],
   update_shopify_config: ["shop_name"],
+  // 02-REVIEW BL-04: `user_id` is server-bound to auth.userId (not a caller arg).
   update_shopify_connection: [
     "shop_name",
     "code",
     "is_fulfillment",
     "token",
-    "user_id",
   ],
   setup_shopify_callback: ["shop_name", "code", "is_fulfillment"],
 };

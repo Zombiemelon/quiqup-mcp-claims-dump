@@ -376,7 +376,6 @@ describe("update_shopify_connection", () => {
       code: "oauth_code_xyz",
       is_fulfillment: true,
       token: "shpat_secret_token",
-      user_id: "u_123",
       idempotency_key: "idem_abc",
       environment: "production",
     });
@@ -385,7 +384,8 @@ describe("update_shopify_connection", () => {
     expect(captured!.token).toBe("shpat_secret_token");
     expect(captured!.code).toBe("oauth_code_xyz");
     expect(captured!.is_fulfillment).toBe(true);
-    expect(captured!.user_id).toBe("u_123");
+    // 02-REVIEW BL-04: user_id is server-bound to auth.userId, not caller-supplied.
+    expect(captured!.user_id).toBe(auth.userId);
     expect(captured).not.toHaveProperty("idempotency_key");
     expect(captured).not.toHaveProperty("environment");
 
@@ -406,7 +406,6 @@ describe("update_shopify_connection", () => {
         shop_name: "acme",
         code: "c",
         is_fulfillment: true,
-        user_id: "u",
       }).success,
     ).toBe(false);
     // Empty token → fails (min 1).
@@ -416,7 +415,6 @@ describe("update_shopify_connection", () => {
         code: "c",
         is_fulfillment: true,
         token: "",
-        user_id: "u",
       }).success,
     ).toBe(false);
     // All required fields present → passes.
@@ -426,9 +424,36 @@ describe("update_shopify_connection", () => {
         code: "c",
         is_fulfillment: true,
         token: "t",
-        user_id: "u",
       }).success,
     ).toBe(true);
+  });
+
+  // 02-REVIEW BL-04: `user_id` must NOT be a caller-supplied arg — it is
+  // server-bound to auth.userId. Schema must reject extra keys (strict)
+  // OR simply ignore them; either way the upstream body must carry
+  // auth.userId, NOT any caller-supplied value.
+  it("user_id is server-bound (BL-04): handler ignores caller-supplied user_id", async () => {
+    let captured: Record<string, unknown> | undefined;
+    server.use(
+      http.put(`${PLATFORM}/shopify/connection`, async ({ request }) => {
+        captured = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ message: "ok" });
+      }),
+    );
+    const mod = await import("../../lib/tools/update-shopify-connection");
+    await mod.spec.handler(auth, {
+      shop_name: "acme",
+      code: "c",
+      is_fulfillment: true,
+      token: "t",
+      // Intentionally inject a foreign user_id via type-cast (an LLM might
+      // try this even after the schema is tightened); the handler must
+      // ignore it and use auth.userId instead.
+      ...({ user_id: "u_attacker" } as unknown as Record<string, never>),
+      environment: "production",
+    });
+    expect(captured!.user_id).toBe(auth.userId);
+    expect(captured!.user_id).not.toBe("u_attacker");
   });
 
   it("throws QuiqupHttpError on upstream 401", async () => {
@@ -447,7 +472,6 @@ describe("update_shopify_connection", () => {
         code: "c",
         is_fulfillment: true,
         token: "t",
-        user_id: "u",
         environment: "production",
       }),
     ).rejects.toBeInstanceOf(QuiqupHttpError);
@@ -461,7 +485,6 @@ describe("update_shopify_connection", () => {
         code: "c",
         is_fulfillment: true,
         token: "t",
-        user_id: "u",
         environment: "production",
       }),
     ).rejects.toThrow(/authenticated user/);
