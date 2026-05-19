@@ -78,7 +78,13 @@ Plans:
   3. An agent can read an order's full history via `get_order_history` (Quiqup REST client added) and its audit-event timeline via `list_order_audit_events` (Audit client added with `AUDIT_BASE_URL` env wiring).
   4. An agent can download a CSV export of orders via `download_orders_export` (Ex-core client added) — CSV returned as base64 per the binary-response contract.
   5. An agent can upload a document to an order via `upload_order_document` (multipart against Orders Core REST) and receive the resulting document reference.
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 03-01-PLAN.md — Orders Core GraphQL client + lookup_orders_ids + bulk_orders_lookup (ORDL-02/03) — Wave 1
+- [ ] 03-02-PLAN.md — Quiqup REST history client + Audit client (auth-exception, AUDIT_BASE_URL wiring) + get_order_history + list_order_audit_events (ORDS-02/05) — Wave 2
+- [ ] 03-03-PLAN.md — Platform reads: find_order_by_id_or_barcode + list_depots + list_missions_filter (ORDL-04/05/06) — Wave 3
+- [ ] 03-04-PLAN.md — Ex-core CSV export client + Orders Core REST multipart client + download_orders_export + upload_order_document (ORDL-07/ORDS-08) — Wave 4
+- [ ] 03-05-PLAN.md — Langfuse eval coverage for 4 new Phase-3 client families + CI gate updates — Wave 5
 **UI hint**: no
 
 ### Phase 4: Orders — Write Path & Lifecycle
