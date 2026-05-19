@@ -58,7 +58,14 @@ Plans:
   3. An agent can fully configure WooCommerce via `list_woocommerce_connections` / `get_woocommerce_config` / `list_woocommerce_states` / `list_woocommerce_shipping_lines` / `setup_woocommerce_connection` / `upsert_woocommerce_config`.
   4. An agent can install Salla (returns OAuth URL), read its connection + config + platform-data, toggle fulfillment, and update config via `install_salla` / `get_salla_connection` / `get_salla_platform_data` / `get_salla_config` / `update_salla_config` / `toggle_salla_fulfillment`.
   5. Both DESTRUCTIVE deletes (`delete_integration_source`, `delete_salla_connection`) refuse to fire without an explicit `confirm: true` parameter and surface clear error semantics on missing confirmation.
-**Plans**: TBD
+**Plans:** 6 plans
+Plans:
+- [ ] 02-01-PLAN.md — Shared integrations surface (INTG-01/03/04/05/06) — Wave 1
+- [ ] 02-02-PLAN.md — Shopify family (INTG-07/08/09/10/11/12) — Wave 2
+- [ ] 02-03-PLAN.md — WooCommerce family (INTG-13/14/15/16/17/18) — Wave 3
+- [ ] 02-04-PLAN.md — Salla family non-destructive (INTG-20/21/23/24/25/26) — Wave 4
+- [ ] 02-05-PLAN.md — DESTRUCTIVE deletes + canonical confirm:true gate helper (INTG-02/22) — Wave 5
+- [ ] 02-06-PLAN.md — Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates — Wave 6
 **UI hint**: no
 
 ### Phase 3: Orders — Read Path
@@ -185,7 +192,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Account, Auth & Reference Data | 4/4 | Plans complete (awaiting gsd-verifier) | 2026-05-19 |
-| 2. Integrations (Shopify / WooCommerce / Salla) | 0/0 | Not started | - |
+| 2. Integrations (Shopify / WooCommerce / Salla) | 0/6 | Plans drafted | - |
 | 3. Orders — Read Path | 0/0 | Not started | - |
 | 4. Orders — Write Path & Lifecycle | 0/0 | Not started | - |
 | 5. Labels, Slips & PDFs | 0/0 | Not started | - |
