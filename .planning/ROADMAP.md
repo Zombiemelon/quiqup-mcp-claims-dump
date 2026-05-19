@@ -16,7 +16,7 @@ Phase 1 establishes the auth/lookup substrate that everything else depends on. P
 ## Phases
 
 - [x] **Phase 1: Account, Auth & Reference Data** — Read-mostly Platform endpoints + Google Places client; establishes the auth/lookup substrate that later phases depend on.
-- [ ] **Phase 2: Integrations (Shopify / WooCommerce / Salla)** — External-OAuth-shape Platform endpoints; two DESTRUCTIVE deletes gated by `confirm: true`.
+- [x] **Phase 2: Integrations (Shopify / WooCommerce / Salla)** — External-OAuth-shape Platform endpoints; two DESTRUCTIVE deletes gated by `confirm: true`. Completed 2026-05-19 (6/6 waves).
 - [ ] **Phase 3: Orders — Read Path** — Orders Core GraphQL + Audit + Ex-core CSV export + Quiqup REST history; introduces three new service clients.
 - [ ] **Phase 4: Orders — Write Path & Lifecycle** — All `batch/set_*` status transitions, mission creation/transfer, and write-side Platform endpoints; every tool DESTRUCTIVE-gated.
 - [ ] **Phase 5: Labels, Slips & PDFs** — Quiqup-GraphQL-host REST client + base64 PDF response pattern shared by later phases (FIN PDFs).
@@ -65,7 +65,7 @@ Plans:
 - [x] 02-03-PLAN.md — WooCommerce family (INTG-13/14/15/16/17/18) — Wave 3
 - [x] 02-04-PLAN.md — Salla family non-destructive (INTG-20/21/23/24/25/26) — Wave 4
 - [x] 02-05-PLAN.md — DESTRUCTIVE deletes + canonical confirm:true gate helper (INTG-02/22) — Wave 5
-- [ ] 02-06-PLAN.md — Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates — Wave 6
+- [x] 02-06-PLAN.md — Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates — Wave 6 — completed 2026-05-19
 **UI hint**: no
 
 ### Phase 3: Orders — Read Path

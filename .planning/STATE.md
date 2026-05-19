@@ -9,21 +9,21 @@
 
 ## Current Position
 
-- **current_phase:** 2
-- **current_plan:** 02-06 (next)
-- **status:** in-progress (Phase 2 Waves 1 + 2 + 3 + 4 + 5 complete; destructive-gate canonical helper landed + INTG-02/22 shipped)
-- **progress:** Phase 2: 5/6 plans complete — only Langfuse eval-coverage wave (02-06) remaining
+- **current_phase:** 3 (next)
+- **current_plan:** 03-01 (next)
+- **status:** Phase 2 complete (6/6 waves shipped; 5/5 family eval coverage at the CI layer)
+- **progress:** Phase 2: 6/6 plans complete — full Phase-2 family eval coverage landed
 
 ```
-[████                ] 20% (Phase 1 complete + Phase 2 5/6 plans)
+[████                ] 20% (Phase 1 complete + Phase 2 complete)
 ```
 
 ## Performance Metrics
 
-- Phases completed: 1 (Phase 1)
-- Plans completed: 9 (01-01..01-04, 02-01, 02-02, 02-03, 02-04, 02-05)
-- Requirements shipped (v1): see REQUIREMENTS.md (02-05 adds INTG-02 + INTG-22 — destructive deletes + canonical confirm:true gate)
-- Service-host families with Langfuse eval: 4 (Platform/lastmile via create_lastmile_order, Fulfilment via baseline, Platform-reads via get_account, Google Places via lookup_google_place)
+- Phases completed: 2 (Phase 1 + Phase 2)
+- Plans completed: 10 (01-01..01-04, 02-01, 02-02, 02-03, 02-04, 02-05, 02-06)
+- Requirements shipped (v1): see REQUIREMENTS.md (02-06 closes Phase 2 — full Langfuse eval coverage for all 5 sub-families)
+- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2: shared-integrations, shopify-integration, woocommerce-integration, salla-integration, destructive-integrations)
 
 ### Plan Execution Log
 
@@ -38,6 +38,7 @@
 | 02    | 03   | ~25m    | 3     | 9     | 2026-05-19 |
 | 02    | 04   | ~20m    | 3     | 9     | 2026-05-19 |
 | 02    | 05   | ~15m    | 3     | 6     | 2026-05-19 |
+| 02    | 06   | ~25m    | 3     | 17    | 2026-05-19 |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@
 - 2026-05-19 (02-05): Rate limit on destructive tools set to TIGHT 3/min (matching `cancel_lastmile_orders_batch`) — deletions are irreversible and rare-by-design. Combined with `confirm: true` requirement, a runaway agent cannot sweep connections.
 - 2026-05-19 (02-05): MSW request-count assertion on the negative paths (confirm missing / confirm:false / missing auth) proves the gate runs client-side — ZERO upstream traffic on any rejected destructive call.
 - 2026-05-19 (02-05): PROJECT.md "Destructive endpoints gated with explicit confirmation parameters" key-decision row can now flip from `[ ]` to `[x]` — flagged for the user to flip in a project-status pass (do NOT flip from inside this plan).
+- 2026-05-19 (02-06): Five Langfuse evals shipped — one per Phase-2 sub-family (shared / shopify / woocommerce / salla / destructive). PROJECT.md "Every new service-host family gets at least one Langfuse eval before its tools count as shipped" invariant is satisfied at the sub-family granularity for all of Phase 2.
+- 2026-05-19 (02-06): Three new STATIC source-inspection scorer patterns established for Phase 2 onwards (token-omission, four-oh-four-as-null, confirm-gate-present). These are the canonical "lock production invariants at the CI layer" approach — readFile() the source and assert substrings, OR import a helper and assert Zod-instance identity. Future phases with similar must-haves SHOULD reuse this pattern. Mirrors plan 01-04 Task 2 Step B (auth-isolation on lookup-google-place).
+- 2026-05-19 (02-06): EVAL_GATE thresholds calibrated per-family — args-overlap 0.7 for shared (8-arg repair tool) and destructive (no-literal-confirm prompt elicitation noise); 0.75 for shopify/woocommerce/salla. All STATIC item-independent scorers (description-quality, sensitive-and-single-use-language, quiqup-vs-woocommerce-state-disambiguation, token-omission, four-oh-four-as-null, confirm-gate-present) pinned at 1.0.
 
 ### Todos
 
@@ -77,9 +81,9 @@
 
 ## Session Continuity
 
-- **Last session:** 2026-05-19 — completed Plan 02-05 (Phase 2 Wave 5: DESTRUCTIVE deletes + canonical confirm:true gate helper). Shipped: `lib/middleware/destructive.ts` (6 exports — `requireConfirm`, `destructiveConfirmField`, `destructiveDryRunField`, `isDryRun`, `ConfirmationRequiredError`, `buildConfirmationRequiredResult`); `delete_integration_source` (INTG-02, DELETE /{source}/delete/{shopName}); `delete_salla_connection` (INTG-22, DELETE /integrations/connections/{id}). Both tools: TIGHT 3/min rate-limit, audit:true, idempotency_key, `dry_run` short-circuit AFTER confirm, encoded path params. 22 helper unit tests + 11 integration tests with MSW request-count assertion proving NO upstream traffic on the negative paths. Tool-surface snapshot 82 → 84 enabled. Full `pnpm test` green (495/498 — 3 pre-existing skips), `EVAL_GATE=1 bun run eval:tool-surface` clean.
-- **Next session:** `/gsd:execute-plan 02-06` (Phase 2 Wave 6 — Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates).
+- **Last session:** 2026-05-19 — completed Plan 02-06 (Phase 2 Wave 6: Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates). Shipped: 5 new family evals (`evals/integrations-shared.ts`, `evals/shopify-integration.ts`, `evals/woocommerce-integration.ts`, `evals/salla-integration.ts`, `evals/destructive-integrations.ts`) with their datasets + score files; 5 new `package.json` eval:* scripts; 5 new `.github/workflows/eval-gate.yml` jobs with `EVAL_GATE: "1"`. THREE new STATIC source-inspection scorer patterns established (token-omission on get-salla-connection.ts T-02-29, four-oh-four-as-null on get-salla-config.ts T-02-30, confirm-gate-present that imports destructiveConfirmField + destructiveDryRunField and asserts Zod-instance identity on both delete tools' inputSchema.shape T-02-52). All 5 evals run as dry-runs, pnpm tsc clean, 495 tests still pass. **Phase 2 is complete.**
+- **Next session:** `/gsd:plan-phase 3` (Phase 3 — Last-mile substrate; or whichever next phase the roadmap directs).
 
 ---
 *State initialized: 2026-05-19*
-*Last updated: 2026-05-19 (post 02-05 execution — destructive deletes + canonical confirm:true gate landed)*
+*Last updated: 2026-05-19 (post 02-06 execution — Phase 2 complete; 5/5 family eval coverage at the CI layer)*
