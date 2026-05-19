@@ -271,15 +271,165 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 
 ## Traceability
 
-Will be populated by `/gsd:plan-phase` and the roadmap. Each phase maps to one service-host family or a closely-related cluster.
-
 **Coverage:**
 - v1 requirements: 115 total (incl. 32 existing)
 - Already shipped: 32 ✓
 - To build: 83
-- Mapped to phases: pending roadmap
-- Unmapped: pending roadmap
+- Mapped to phases: 83 ✓
+- Unmapped: 0 ✓
+
+`[x]` (shipped) requirements are not mapped to a phase. INVT-13 is mapped to Phase 7 as a build candidate but tagged as a possible defer-to-out-of-scope; the decision is taken during Phase 7 planning. SRVR-01/SRVR-02 are mapped to Phase 11 with an explicit "may stay un-exposed" decision recorded in that phase's plan.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| AUTH-01 | (shipped) | Validated |
+| AUTH-02 | (shipped) | Validated |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| AUTH-06 | Phase 1 | Pending |
+| AUTH-07 | Phase 1 | Pending |
+| AUTH-08 | Phase 1 | Pending |
+| AUTH-09 | Phase 1 | Pending |
+| AUTH-10 | Phase 1 | Pending |
+| AUTH-11 | Phase 1 | Pending |
+| AUTH-12 | Phase 1 | Pending |
+| AUTH-13 | Phase 1 | Pending |
+| ADDR-01 | Phase 1 | Pending |
+| ADDR-02 | Phase 1 | Pending |
+| ADDR-03 | Phase 1 | Pending |
+| ADDR-04 | Phase 1 | Pending |
+| ADDR-05 | Phase 1 | Pending |
+| ADDR-06 | Phase 1 | Pending |
+| ADDR-07 | Phase 1 | Pending |
+| ADDR-08 | Phase 1 | Pending |
+| INTG-01 | Phase 2 | Pending |
+| INTG-02 | Phase 2 | Pending |
+| INTG-03 | Phase 2 | Pending |
+| INTG-04 | Phase 2 | Pending |
+| INTG-05 | Phase 2 | Pending |
+| INTG-06 | Phase 2 | Pending |
+| INTG-07 | Phase 2 | Pending |
+| INTG-08 | Phase 2 | Pending |
+| INTG-09 | Phase 2 | Pending |
+| INTG-10 | Phase 2 | Pending |
+| INTG-11 | Phase 2 | Pending |
+| INTG-12 | Phase 2 | Pending |
+| INTG-13 | Phase 2 | Pending |
+| INTG-14 | Phase 2 | Pending |
+| INTG-15 | Phase 2 | Pending |
+| INTG-16 | Phase 2 | Pending |
+| INTG-17 | Phase 2 | Pending |
+| INTG-18 | Phase 2 | Pending |
+| INTG-19 | Phase 1 | Pending |
+| INTG-20 | Phase 2 | Pending |
+| INTG-21 | Phase 2 | Pending |
+| INTG-22 | Phase 2 | Pending |
+| INTG-23 | Phase 2 | Pending |
+| INTG-24 | Phase 2 | Pending |
+| INTG-25 | Phase 2 | Pending |
+| INTG-26 | Phase 2 | Pending |
+| ORDL-01 | (shipped) | Validated |
+| ORDL-02 | Phase 3 | Pending |
+| ORDL-03 | Phase 3 | Pending |
+| ORDL-04 | Phase 3 | Pending |
+| ORDL-05 | Phase 3 | Pending |
+| ORDL-06 | Phase 3 | Pending |
+| ORDL-07 | Phase 3 | Pending |
+| ORDL-08 | Phase 1 | Pending |
+| ORDL-09 | Phase 1 | Pending |
+| ORDL-10 | Phase 1 | Pending |
+| ORDL-11 | Phase 1 | Pending |
+| ORDL-12 | Phase 1 | Pending |
+| ORDS-01 | (shipped) | Validated |
+| ORDS-02 | Phase 3 | Pending |
+| ORDS-03 | Phase 4 | Pending |
+| ORDS-04 | Phase 4 | Pending |
+| ORDS-05 | Phase 3 | Pending |
+| ORDS-06 | Phase 4 | Pending |
+| ORDS-07 | Phase 4 | Pending |
+| ORDS-08 | Phase 3 | Pending |
+| ORDC-01 | (shipped) | Validated |
+| ORDC-02 | (shipped) | Validated |
+| ORDC-03 | (shipped) | Validated |
+| ORDC-04 | Phase 4 | Pending |
+| ORDC-05 | Phase 4 | Pending |
+| ORDT-01 | (shipped) | Validated |
+| ORDT-02 | (shipped) | Validated |
+| ORDT-03 | Phase 4 | Pending |
+| ORDT-04 | Phase 4 | Pending |
+| ORDT-05 | Phase 4 | Pending |
+| ORDT-06 | Phase 4 | Pending |
+| ORDT-07 | Phase 4 | Pending |
+| ORDT-08 | Phase 4 | Pending |
+| ORDT-09 | Phase 4 | Pending |
+| ORDT-10 | Phase 4 | Pending |
+| ORDT-11 | Phase 4 | Pending |
+| ORDT-12 | Phase 4 | Pending |
+| ORDT-13 | Phase 4 | Pending |
+| ORDT-14 | Phase 4 | Pending |
+| MISS-01 | Phase 4 | Pending |
+| MISS-02 | Phase 4 | Pending |
+| MISS-03 | Phase 5 | Pending |
+| MISS-04 | (shipped) | Validated |
+| MISS-05 | Phase 5 | Pending |
+| MISS-06 | Phase 5 | Pending |
+| INBD-01..06 | (shipped) | Validated |
+| INBD-07 | Phase 6 | Pending |
+| INBD-08 | Phase 6 | Pending |
+| INBD-09 | Phase 6 | Pending |
+| PROD-01..03 | (shipped) | Validated |
+| PROD-04 | Phase 6 | Pending |
+| PROD-05 | Phase 6 | Pending |
+| PROD-06 | Phase 6 | Pending |
+| PROD-07 | Phase 6 | Pending |
+| PROD-08 | Phase 6 | Pending |
+| PROD-09 | Phase 6 | Pending |
+| PROD-10 | (shipped) | Validated |
+| PROD-11 | (shipped) | Validated |
+| INVT-01..05 | (shipped) | Validated |
+| INVT-06 | Phase 7 | Pending |
+| INVT-07 | Phase 7 | Pending |
+| INVT-08 | Phase 7 | Pending |
+| INVT-09 | Phase 7 | Pending |
+| INVT-10 | Phase 7 | Pending |
+| INVT-11 | Phase 7 | Pending |
+| INVT-12 | Phase 7 | Pending |
+| INVT-13 | (out-of-scope candidate; decided in Phase 7 plan) | Pending |
+| FOLM-01..06 | (shipped) | Validated |
+| SHIP-01 | Phase 8 | Pending |
+| SHIP-02 | Phase 8 | Pending |
+| SHIP-03 | Phase 8 | Pending |
+| SHIP-04 | Phase 8 | Pending |
+| SHPR-01 | Phase 8 | Pending |
+| SHPR-02 | Phase 8 | Pending |
+| SHPR-03 | Phase 8 | Pending |
+| SHPR-04 | Phase 8 | Pending |
+| RETN-01 | Phase 9 | Pending |
+| RETN-02 | Phase 9 | Pending |
+| RETN-03 | Phase 9 | Pending |
+| RETN-04 | Phase 9 | Pending |
+| RETN-05 | Phase 9 | Pending |
+| RETN-06 | Phase 9 | Pending |
+| RETN-07 | Phase 9 | Pending |
+| RETN-08 | Phase 9 | Pending |
+| RETN-09 | Phase 9 | Pending |
+| FIN-01 | Phase 10 | Pending |
+| FIN-02 | Phase 10 | Pending |
+| FIN-03 | Phase 10 | Pending |
+| FIN-04 | Phase 10 | Pending |
+| FIN-05 | Phase 10 | Pending |
+| FIN-06 | Phase 10 | Pending |
+| FIN-07 | Phase 10 | Pending |
+| FIN-08 | Phase 10 | Pending |
+| FIN-09 | Phase 10 | Pending |
+| FIN-10 | Phase 10 | Pending |
+| FIN-11 | Phase 10 | Pending |
+| NOTF-01 | Phase 11 | Pending |
+| RPT-01 | Phase 11 | Pending |
+| SRVR-01 | Phase 11 | Pending |
+| SRVR-02 | Phase 11 | Pending |
 
 ---
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-19 after initial definition*
+*Last updated: 2026-05-19 — Traceability populated by roadmap*
