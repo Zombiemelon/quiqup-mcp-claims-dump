@@ -29,7 +29,8 @@ const inputSchema = z.object({
   town: z.string().min(1, "town is required"),
   country: z
     .string()
-    .min(2, "country is required (ISO-3166 alpha-2, e.g. 'AE')"),
+    .length(2, "country must be ISO-3166 alpha-2 (e.g. 'AE')")
+    .describe("ISO-3166 alpha-2 country code"),
   coordinates: z.object({ lat: coordinate, lng: coordinate }),
   contact_name: z.string().optional(),
   contact_phone: z.string().optional(),
