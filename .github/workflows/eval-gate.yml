@@ -16,6 +16,12 @@ name: Eval Gate
 #   - get-account        — Phase-1 Platform-read family (added 2026-05-19).
 #   - lookup-google-place — Google Places family (added 2026-05-19; first
 #                          eval for this brand-new service host).
+#   - integrations-shared, shopify-integration, woocommerce-integration,
+#     salla-integration, destructive-integrations — Phase-2 family coverage
+#     (added 2026-05-19, plan 02-06). Salla and destructive evals include
+#     STATIC source-inspection scorers that lock T-02-29 (token omission),
+#     T-02-30 (404-as-null), and T-02-52 (confirm-gate identity) at the CI
+#     layer.
 #
 # Required GitHub Actions secrets:
 #   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL
@@ -108,3 +114,123 @@ jobs:
           LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: bun run eval:lookup-google-place
+
+  integrations-shared:
+    name: Eval gate — phase2-integrations-shared (5 tools)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:integrations-shared (args-overlap >= 0.7, description-quality >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:integrations-shared
+
+  shopify-integration:
+    name: Eval gate — phase2-shopify-integration (6 tools)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:shopify-integration (args-overlap >= 0.75, description-quality >= 1.0, sensitive-and-single-use-language >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:shopify-integration
+
+  woocommerce-integration:
+    name: Eval gate — phase2-woocommerce-integration (6 tools)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:woocommerce-integration (args-overlap >= 0.75, description-quality >= 1.0, quiqup-vs-woocommerce-state-disambiguation >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:woocommerce-integration
+
+  salla-integration:
+    name: Eval gate — phase2-salla-integration (6 tools; token-omission + 404-as-null locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:salla-integration (args-overlap >= 0.75, description-quality >= 1.0, token-omission >= 1.0, four-oh-four-as-null >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:salla-integration
+
+  destructive-integrations:
+    name: Eval gate — phase2-destructive-integrations (2 tools; confirm-gate locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:destructive-integrations (args-overlap >= 0.7, confirm-elicited >= 0.75, confirm-gate-present >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:destructive-integrations
