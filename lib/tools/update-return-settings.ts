@@ -102,7 +102,18 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       body.return_window_days = args.return_window_days;
     if (args.allowed_reasons !== undefined)
       body.allowed_reasons = args.allowed_reasons;
-    if (args.settings !== undefined) body.settings = args.settings;
+    if (args.settings !== undefined) {
+      // Bound the serialised settings blob — same rationale as
+      // update_account: an LLM emitting a giant nested object would
+      // otherwise ship MBs upstream and balloon the audit-log line.
+      const serialised = JSON.stringify(args.settings);
+      if (serialised.length > 64_000) {
+        throw new Error(
+          "settings blob exceeds 64KB; narrow the payload to just the keys you intend to update",
+        );
+      }
+      body.settings = args.settings;
+    }
 
     const res = await fetch(url, {
       method: "PUT",

@@ -131,7 +131,18 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     if (args.region_code !== undefined) body.region_code = args.region_code;
     if (args.service_offering !== undefined)
       body.service_offering = args.service_offering;
-    if (args.settings !== undefined) body.settings = args.settings;
+    if (args.settings !== undefined) {
+      // Bound the serialised settings blob — an LLM emitting a giant nested
+      // object would otherwise ship MBs upstream and balloon the audit-log
+      // line. 64KB is generous for real settings shapes but cheap to guard.
+      const serialised = JSON.stringify(args.settings);
+      if (serialised.length > 64_000) {
+        throw new Error(
+          "settings blob exceeds 64KB; narrow the payload to just the keys you intend to update",
+        );
+      }
+      body.settings = args.settings;
+    }
     if (args.bank_name !== undefined) body.bank_name = args.bank_name;
     if (args.bank_account_number !== undefined)
       body.bank_account_number = args.bank_account_number;
