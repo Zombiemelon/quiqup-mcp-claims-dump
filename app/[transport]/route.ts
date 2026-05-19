@@ -30,6 +30,7 @@ import { spec as getProductBySkuSpec } from "@/lib/tools/get-product-by-sku";
 // TODO(M6): retroactive scope/audit/idempotency guardrails.
 import { spec as createLastmileOrderSpec } from "@/lib/tools/create-lastmile-order";
 import { spec as updateLastmileOrderSpec } from "@/lib/tools/update-lastmile-order";
+import { spec as updateOrderWaypointSpec } from "@/lib/tools/update-order-waypoint";
 import { spec as addParcelToOrderSpec } from "@/lib/tools/add-parcel-to-order";
 import { spec as createFulfilmentOrderSpec } from "@/lib/tools/create-fulfilment-order";
 import { spec as updateFulfilmentOrderSpec } from "@/lib/tools/update-fulfilment-order";
@@ -75,6 +76,7 @@ const handler = createMcpHandler(
     // -- M3 enabled writes: thin pass-through (TODO(M4)/M6 hardening) --
     registerTool(server, createLastmileOrderSpec);
     registerTool(server, updateLastmileOrderSpec);
+    registerTool(server, updateOrderWaypointSpec);
     registerTool(server, addParcelToOrderSpec);
     registerTool(server, createFulfilmentOrderSpec);
     registerTool(server, updateFulfilmentOrderSpec);
