@@ -50,7 +50,7 @@ import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
-import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
+import { environmentField, getPlatformApiBaseUrl, iso3166Alpha2 } from "@/lib/clients/quiqup-env";
 
 const inputSchema = z.object({
   connection_id: z
@@ -109,8 +109,10 @@ const inputSchema = z.object({
         "the shipment event; 'ready_for_collection_or_webhook' is the OR of " +
         "the rfc state and the webhook arrival.",
     ),
+  // 02-REVIEW WR-01: enforce ISO-3166 alpha-2 via regex (was length(2) which
+  // admitted "12", "  ", lowercase, etc.).
   country_filter: z
-    .array(z.string().length(2))
+    .array(iso3166Alpha2)
     .optional()
     .describe(
       "ISO-3166 alpha-2 country codes — orders shipped to countries NOT in " +

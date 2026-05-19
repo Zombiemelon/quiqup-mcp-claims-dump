@@ -504,14 +504,26 @@ describe("upsert_woocommerce_config", () => {
     expect(mod.spec.description).toContain("list_woocommerce_shipping_lines");
   });
 
-  it("schema rejects country_filter entries with length != 2 (ISO-3166 alpha-2)", async () => {
+  it("schema rejects country_filter entries that aren't ISO-3166 alpha-2 (WR-01)", async () => {
     const mod = await import("../../lib/tools/upsert-woocommerce-config");
+    // Length-3 — original rejection (covered by length(2) too).
     expect(
       mod.spec.inputSchema.safeParse({
         site_url: "https://acme.example.com",
         country_filter: ["USA"],
       }).success,
     ).toBe(false);
+    // 02-REVIEW WR-01: the previous length(2) shape ADMITTED these. The new
+    // ISO-3166 alpha-2 regex must reject them.
+    for (const bad of ["12", "  ", "\n\n", "ae", "Ae", "A1", "A-"]) {
+      expect(
+        mod.spec.inputSchema.safeParse({
+          site_url: "https://acme.example.com",
+          country_filter: [bad],
+        }).success,
+      ).toBe(false);
+    }
+    // Positive — two uppercase ASCII letters.
     expect(
       mod.spec.inputSchema.safeParse({
         site_url: "https://acme.example.com",

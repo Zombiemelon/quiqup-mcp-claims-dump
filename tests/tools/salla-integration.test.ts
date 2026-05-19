@@ -524,8 +524,9 @@ describe("update_salla_config", () => {
     ).toBe(true);
   });
 
-  it("schema rejects country_filter entries with length != 2 (ISO-3166 alpha-2)", async () => {
+  it("schema rejects country_filter entries that aren't ISO-3166 alpha-2 (WR-01)", async () => {
     const mod = await import("../../lib/tools/update-salla-config");
+    // Length-3 — original rejection.
     expect(
       mod.spec.inputSchema.safeParse({
         connection_id: "c1",
@@ -533,6 +534,17 @@ describe("update_salla_config", () => {
         environment: "production",
       }).success,
     ).toBe(false);
+    // 02-REVIEW WR-01: the previous length(2) shape ADMITTED these.
+    for (const bad of ["12", "  ", "\n\n", "ae", "Ae", "A1", "A-"]) {
+      expect(
+        mod.spec.inputSchema.safeParse({
+          connection_id: "c1",
+          country_filter: [bad],
+          environment: "production",
+        }).success,
+      ).toBe(false);
+    }
+    // Positive.
     expect(
       mod.spec.inputSchema.safeParse({
         connection_id: "c1",

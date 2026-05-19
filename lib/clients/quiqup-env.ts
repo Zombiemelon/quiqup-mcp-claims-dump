@@ -83,3 +83,19 @@ export function getPlatformApiBaseUrl(env: QuiqupEnvironment = "production"): st
 export function isQuiqupEnvironment(v: unknown): v is QuiqupEnvironment {
   return v === "production" || v === "staging";
 }
+
+/**
+ * ISO-3166 alpha-2 country code: exactly two uppercase ASCII letters.
+ *
+ * Replaces the per-tool `z.string().length(2)` shape that admitted `"12"`,
+ * `"  "`, `"\n\n"`, lowercase, etc. (02-REVIEW WR-01 — same pattern as
+ * Phase-1 BL-02). Use this anywhere the upstream expects an ISO-3166
+ * alpha-2 country code (`country_filter[]` on Salla / WooCommerce config,
+ * future address country fields).
+ */
+export const iso3166Alpha2 = z
+  .string()
+  .regex(
+    /^[A-Z]{2}$/,
+    "must be ISO-3166 alpha-2: two uppercase ASCII letters, e.g. AE, SA",
+  );
