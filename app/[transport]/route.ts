@@ -25,6 +25,15 @@ import { spec as getInboundStateHistorySpec } from "@/lib/tools/get-inbound-stat
 import { spec as getInboundItemsSpec } from "@/lib/tools/get-inbound-items";
 import { spec as getProductBySkuSpec } from "@/lib/tools/get-product-by-sku";
 
+// Phase 1: account + permissions + reference-data reads.
+import { spec as getAccountSpec } from "@/lib/tools/get-account";
+import { spec as getPermissionsSpec } from "@/lib/tools/get-permissions";
+import { spec as getAccountCapabilitiesSpec } from "@/lib/tools/get-account-capabilities";
+import { spec as getAccountByIdSpec } from "@/lib/tools/get-account-by-id";
+import { spec as getQuiqdashInitSpec } from "@/lib/tools/get-quiqdash-init";
+import { spec as listServiceKindsSpec } from "@/lib/tools/list-service-kinds";
+import { spec as listQuiqupOrderStatesSpec } from "@/lib/tools/list-quiqup-order-states";
+
 // M3 thin pass-through enabled writes.
 // TODO(M4): cassette + output schemas + error mapping for these.
 // TODO(M6): retroactive scope/audit/idempotency guardrails.
@@ -79,6 +88,15 @@ const handler = createMcpHandler(
     registerTool(server, getInboundStateHistorySpec);
     registerTool(server, getInboundItemsSpec);
     registerTool(server, getProductBySkuSpec);
+
+    // -- Phase 1: account + permissions reads --
+    registerTool(server, getAccountSpec);
+    registerTool(server, getPermissionsSpec);
+    registerTool(server, getAccountCapabilitiesSpec);
+    registerTool(server, getAccountByIdSpec);
+    registerTool(server, getQuiqdashInitSpec);
+    registerTool(server, listServiceKindsSpec);
+    registerTool(server, listQuiqupOrderStatesSpec);
 
     // -- M3 enabled writes: thin pass-through (TODO(M4)/M6 hardening) --
     registerTool(server, createLastmileOrderSpec);
