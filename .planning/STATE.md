@@ -10,19 +10,19 @@
 ## Current Position
 
 - **current_phase:** 2
-- **current_plan:** 02-03 (next)
-- **status:** in-progress (Phase 2 Waves 1 + 2 complete; Shopify family landed)
-- **progress:** Phase 2: 2/6 plans complete — Salla/WooCommerce/Mintsoft/SBL still pending
+- **current_plan:** 02-05 (next)
+- **status:** in-progress (Phase 2 Waves 1 + 2 + 3 + 4 complete; Shopify + WooCommerce + Salla non-destructive families landed)
+- **progress:** Phase 2: 4/6 plans complete — Mintsoft/SBL + Salla-destructive (INTG-22) still pending
 
 ```
-[██                  ] 12% (Phase 1 complete + Phase 2 2/6 plans)
+[███                 ] 18% (Phase 1 complete + Phase 2 4/6 plans)
 ```
 
 ## Performance Metrics
 
 - Phases completed: 1 (Phase 1)
-- Plans completed: 6 (01-01..01-04, 02-01, 02-02)
-- Requirements shipped (v1): see REQUIREMENTS.md (02-02 adds INTG-07/08/09/10/11/12)
+- Plans completed: 8 (01-01..01-04, 02-01, 02-02, 02-03, 02-04)
+- Requirements shipped (v1): see REQUIREMENTS.md (02-04 adds INTG-20/21/23/24/25/26 — INTG-22 deferred to 02-05)
 - Service-host families with Langfuse eval: 4 (Platform/lastmile via create_lastmile_order, Fulfilment via baseline, Platform-reads via get_account, Google Places via lookup_google_place)
 
 ### Plan Execution Log
@@ -35,6 +35,8 @@
 | 01    | 04   | ~10m    | 3     | 8     | 2026-05-19 |
 | 02    | 01   | ~25m    | 3     | 8     | 2026-05-19 |
 | 02    | 02   | ~10m    | 3     | 9     | 2026-05-19 |
+| 02    | 03   | ~25m    | 3     | 9     | 2026-05-19 |
+| 02    | 04   | ~20m    | 3     | 9     | 2026-05-19 |
 
 ## Accumulated Context
 
@@ -54,6 +56,10 @@
 - 2026-05-19 (02-02): `update_shopify_connection.token` marked SENSITIVE in the tool description (T-02-12); audit middleware already redacts the `token` key via ALWAYS_REDACT_KEYS at the at-rest layer; description-quality grep-lock prevents the wording from regressing.
 - 2026-05-19 (02-02): `update_shopify_connection` rate limit set to 5/min (matching create_account_team_member privilege-escalation guardrail) — connection-credential mutations should be rare; rapid-fire calls almost certainly indicate misuse.
 - 2026-05-19 (02-02): `update_shopify_config.wms_delay_minutes` bounded to [0, 10080] (1 week) per T-02-14 — prevents an LLM from setting an effectively-infinite delay that would freeze WMS pickup.
+- 2026-05-19 (02-04): `get_salla_connection` strips upstream `token` field via destructure-and-discard (T-02-29). Locked in by .strict() output schema + canary regression test ("SECRET-TOKEN-DO-NOT-LEAK") + description-pin. Canonical Salla-vs-Shopify difference — Shopify exposes token on update_shopify_connection (merchant input); Salla NEVER exposes token (Quiqup-internal secret).
+- 2026-05-19 (02-04): `get_salla_config` returns STRUCTURED `{ config: null, message }` on upstream 404 rather than throwing QuiqupHttpError (T-02-30). 404 here means "no config saved yet" — agent can immediately call `update_salla_config` without parsing an HTTP error. All other non-2xx (401/403/422/5xx) still throw.
+- 2026-05-19 (02-04): `update_salla_config.delivery_methods[].service_kind` is z.string() (free-form) with description-pin to `list_service_kinds` (Phase 1 AUTH-08). Per threat-register T-02-33 accept disposition — duplicating the enum would create drift surface for a read-time taxonomy that may grow.
+- 2026-05-19 (02-04): INTG-22 (`delete_salla_connection`) deliberately deferred to plan 02-05 — it requires the canonical `confirm:true` destructive gate that the next wave establishes.
 
 ### Todos
 
@@ -65,9 +71,9 @@
 
 ## Session Continuity
 
-- **Last session:** 2026-05-19 — completed Plan 02-02 (Shopify integration: 6 tools — INTG-07/08/09/10/11/12). Reads use encodeURIComponent + URLSearchParams; writes carry BL-01 guardrails (rateLimit + idempotency + audit:true); setup_shopify_callback description locks in the single-use OAuth-code warning; update_shopify_connection description marks token SENSITIVE — both pinned by description-quality grep assertions in the 20-test MSW suite. Tool-surface snapshot 64 → 70 enabled, full `pnpm test` green (418/421 — 3 pre-existing skips), `EVAL_GATE=1 bun run eval:tool-surface` clean.
-- **Next session:** `/gsd:execute-plan 02-03` (Phase 2 Wave 3 — Salla family).
+- **Last session:** 2026-05-19 — completed Plan 02-04 (Salla integration non-destructive: 6 tools — INTG-20/21/23/24/25/26). `get_salla_connection` defensively strips upstream `token` field (canary regression test against "SECRET-TOKEN-DO-NOT-LEAK"); `get_salla_config` surfaces 404 as STRUCTURED `{ config: null }` rather than throwing; `update_salla_config` description pins `service_kind` to `list_service_kinds` (Phase 1 AUTH-08); both writes carry BL-01 guardrails. Tool-surface snapshot 76 → 82 enabled, full `pnpm test` green (462/465 — 3 pre-existing skips), `EVAL_GATE=1 bun run eval:tool-surface` clean. INTG-22 destructive delete deferred to 02-05.
+- **Next session:** `/gsd:execute-plan 02-05` (Phase 2 Wave 5 — Mintsoft/SBL + INTG-22 destructive Salla delete with `confirm:true` gate).
 
 ---
 *State initialized: 2026-05-19*
-*Last updated: 2026-05-19 (post 02-02 execution — Shopify family complete)*
+*Last updated: 2026-05-19 (post 02-04 execution — Salla non-destructive family complete)*

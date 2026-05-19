@@ -56,13 +56,13 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 - [ ] **INTG-17**: `setup_woocommerce_connection` — `POST /woocommerce/connection` (Platform)
 - [ ] **INTG-18**: `upsert_woocommerce_config` — `PUT /woocommerce/settings/config/upsert` (Platform)
 - [x] **INTG-19**: `list_quiqup_order_states` — `GET /quiqup/orders/states` (Platform)
-- [ ] **INTG-20**: `install_salla` — `GET /integrations/install/salla` (Platform) — returns OAuth URL
-- [ ] **INTG-21**: `get_salla_connection` — `GET /integrations/connections/{id}` (Platform)
+- [x] **INTG-20**: `install_salla` — `GET /integrations/install/salla` (Platform) — returns OAuth URL
+- [x] **INTG-21**: `get_salla_connection` — `GET /integrations/connections/{id}` (Platform)
 - [ ] **INTG-22**: `delete_salla_connection` — `DELETE /integrations/connections/{id}` (Platform) — DESTRUCTIVE
-- [ ] **INTG-23**: `toggle_salla_fulfillment` — `PUT /integrations/connections/{id}/fulfillment` (Platform)
-- [ ] **INTG-24**: `get_salla_platform_data` — `GET /integrations/configs/{connectionId}/platform-data` (Platform)
-- [ ] **INTG-25**: `get_salla_config` — `GET /integrations/configs/{connectionId}` (Platform)
-- [ ] **INTG-26**: `update_salla_config` — `PUT /integrations/configs/{connectionId}` (Platform)
+- [x] **INTG-23**: `toggle_salla_fulfillment` — `PUT /integrations/connections/{id}/fulfillment` (Platform)
+- [x] **INTG-24**: `get_salla_platform_data` — `GET /integrations/configs/{connectionId}/platform-data` (Platform)
+- [x] **INTG-25**: `get_salla_config` — `GET /integrations/configs/{connectionId}` (Platform)
+- [x] **INTG-26**: `update_salla_config` — `PUT /integrations/configs/{connectionId}` (Platform)
 
 ### Orders — Listing & Filters (ORDL)
 
@@ -322,13 +322,13 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | INTG-17 | Phase 2 | Pending |
 | INTG-18 | Phase 2 | Pending |
 | INTG-19 | Phase 1 | Completed (01-01) |
-| INTG-20 | Phase 2 | Pending |
-| INTG-21 | Phase 2 | Pending |
-| INTG-22 | Phase 2 | Pending |
-| INTG-23 | Phase 2 | Pending |
-| INTG-24 | Phase 2 | Pending |
-| INTG-25 | Phase 2 | Pending |
-| INTG-26 | Phase 2 | Pending |
+| INTG-20 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
+| INTG-21 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
+| INTG-22 | Phase 2 / Plan 02-05 | Pending (destructive — deferred to 02-05 with confirm:true gate) |
+| INTG-23 | Phase 2 / Plan 02-04 | Shipped (commit 7a24f62) |
+| INTG-24 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
+| INTG-25 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
+| INTG-26 | Phase 2 / Plan 02-04 | Shipped (commit 7a24f62) |
 | ORDL-01 | (shipped) | Validated |
 | ORDL-02 | Phase 3 | Pending |
 | ORDL-03 | Phase 3 | Pending |
