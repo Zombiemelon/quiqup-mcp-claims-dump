@@ -1,0 +1,110 @@
+name: Eval Gate
+
+# Phase-1 onwards "Langfuse eval per service-host family" gate. Runs the
+# offline-tool-call evals plus the description-quality + surface-snapshot
+# scorers with EVAL_GATE=1 set, so a regression fails the build.
+#
+# Distinct from .github/workflows/evals.yml — that file is the original
+# lastmile-order-creation eval (v1-offline + v3-roundtrip with staging side
+# effects). This file is the per-family gate that grew out of Phase 1's
+# "every service-host family ships with at least one Langfuse eval"
+# invariant; it currently covers:
+#
+#   - tool-surface       — snapshot diff of the registered tool set vs
+#                          evals/snapshots/tool-surface.json. Cheap; runs
+#                          on every PR.
+#   - get-account        — Phase-1 Platform-read family (added 2026-05-19).
+#   - lookup-google-place — Google Places family (added 2026-05-19; first
+#                          eval for this brand-new service host).
+#
+# Required GitHub Actions secrets:
+#   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL
+#   ANTHROPIC_API_KEY
+#
+# Manual runs: trigger from the Actions tab via workflow_dispatch.
+
+on:
+  pull_request:
+    paths:
+      - "lib/tools/**"
+      - "lib/clients/**"
+      - "evals/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/eval-gate.yml"
+  workflow_dispatch:
+
+# Cancel earlier in-progress runs on the same PR/branch so the latest
+# commit's eval is the authoritative one.
+concurrency:
+  group: eval-gate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tool-surface:
+    name: Eval gate — tool-surface snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:tool-surface (registered-tools snapshot)"
+        env:
+          EVAL_GATE: "1"
+        run: bun run eval:tool-surface
+
+  get-account:
+    name: Eval gate — get_account (Phase-1 Platform reads)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:get-account (args-overlap >= 0.8, description-quality >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:get-account
+
+  lookup-google-place:
+    name: Eval gate — lookup_google_place (Google Places family)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:lookup-google-place (args-overlap >= 0.8, description-quality >= 1.0, auth-isolation >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:lookup-google-place
