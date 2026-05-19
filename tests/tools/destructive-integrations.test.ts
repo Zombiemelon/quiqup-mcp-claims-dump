@@ -1,0 +1,369 @@
+/**
+ * MSW-mocked Vitest suite for the two Phase-2 / Wave-5 DESTRUCTIVE delete
+ * tools (INTG-02 delete_integration_source, INTG-22 delete_salla_connection).
+ *
+ * Coverage contract per tool — FIVE paths (per planner success criterion #7):
+ *   1. confirm missing            → MSW asserts ZERO outbound DELETE.
+ *                                   result.isError === true; text names tool
+ *                                   + resource + literal "confirm: true".
+ *   2. confirm: false             → same as 1 (defense-in-depth).
+ *   3. confirm: true + dry_run    → MSW asserts ZERO outbound DELETE.
+ *                                   result is non-error; text parses to
+ *                                   `{ ok, dry_run:true, would_delete, note }`.
+ *   4. confirm: true only         → MSW captures EXACTLY ONE DELETE; URL has
+ *                                   encoded path params; no body; result text
+ *                                   parses to `{ ok, deleted, upstream_status }`.
+ *   5. missing auth.userId        → throws Error(/authenticated user/); MSW
+ *                                   asserts ZERO outbound DELETE.
+ *
+ * Plus tool-specific:
+ *   - delete_integration_source: shop_name with spaces is percent-encoded;
+ *     source "magento" rejected at schema parse (enum-bound).
+ *   - delete_salla_connection: id containing "/" is percent-encoded.
+ *
+ * Per WR-05 fix `QUIQUP_PLATFORM_API_BASE_URL` is unset in `beforeEach` —
+ * a dev with that env var set would otherwise silently route around MSW.
+ *
+ * Request counting (per planner): each test that asserts "NO upstream
+ * DELETE" registers a wide DELETE handler that bumps a counter; the
+ * assertion is `expect(deleteCount).toBe(0)`. This is the bypass-proof
+ * lock — it proves the gate runs CLIENT-SIDE and no traffic reaches
+ * upstream on the negative paths.
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { http, HttpResponse } from "msw";
+import { server } from "../setup/msw";
+
+vi.mock("@/lib/quiqup", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getQuiqupReadyJwt: vi.fn(async (_userId: string) => "test-jwt-for-msw"),
+  };
+});
+
+const auth = {
+  userId: "user_test",
+  orgId: null,
+  sessionId: "sess_test",
+  scopes: ["write"],
+  bearerToken: "inbound_at_jwt_unused_in_v3b",
+};
+
+const authAnon = {
+  userId: null,
+  orgId: null,
+  sessionId: null,
+  scopes: [],
+  bearerToken: null,
+};
+
+const PLATFORM = "https://platform-api.quiqup.com";
+
+const originalPlatformUrl = process.env.QUIQUP_PLATFORM_API_BASE_URL;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  delete process.env.QUIQUP_PLATFORM_API_BASE_URL;
+});
+
+afterEach(() => {
+  if (originalPlatformUrl === undefined) {
+    delete process.env.QUIQUP_PLATFORM_API_BASE_URL;
+  } else {
+    process.env.QUIQUP_PLATFORM_API_BASE_URL = originalPlatformUrl;
+  }
+});
+
+// -----------------------------------------------------------------------------
+// delete_integration_source (INTG-02)
+// -----------------------------------------------------------------------------
+
+describe("delete_integration_source", () => {
+  it("[1] confirm missing → isError, NO upstream DELETE", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.delete(`${PLATFORM}/:source/delete/:shop`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-integration-source");
+    const result = await mod.spec.handler(auth, {
+      source: "shopify",
+      shop_name: "acme",
+      environment: "production",
+    });
+    expect(deleteCount).toBe(0);
+    expect((result as { isError?: boolean }).isError).toBe(true);
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    expect(first.text).toContain("delete_integration_source");
+    expect(first.text).toContain("confirm: true");
+    expect(first.text).toContain("shopify");
+    expect(first.text).toContain("acme");
+  });
+
+  it("[2] confirm: false → isError, NO upstream DELETE (defense-in-depth)", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.delete(`${PLATFORM}/:source/delete/:shop`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-integration-source");
+    const result = await mod.spec.handler(auth, {
+      source: "shopify",
+      shop_name: "acme",
+      confirm: false,
+      environment: "production",
+    });
+    expect(deleteCount).toBe(0);
+    expect((result as { isError?: boolean }).isError).toBe(true);
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    expect(first.text).toContain("confirm: true");
+  });
+
+  it("[3] confirm: true + dry_run: true → preview, NO upstream DELETE", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.delete(`${PLATFORM}/:source/delete/:shop`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-integration-source");
+    const result = await mod.spec.handler(auth, {
+      source: "shopify",
+      shop_name: "acme",
+      confirm: true,
+      dry_run: true,
+      environment: "production",
+    });
+    expect(deleteCount).toBe(0);
+    expect((result as { isError?: boolean }).isError).toBeFalsy();
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    const parsed = JSON.parse(first.text) as Record<string, unknown>;
+    expect(parsed.ok).toBe(true);
+    expect(parsed.dry_run).toBe(true);
+    expect(parsed.would_delete).toEqual({ source: "shopify", shop_name: "acme" });
+    expect(typeof parsed.note).toBe("string");
+  });
+
+  it("[4] confirm: true only → EXACTLY ONE DELETE with encoded path params and no body", async () => {
+    let deleteCount = 0;
+    let capturedUrl: string | undefined;
+    let capturedMethod: string | undefined;
+    let capturedBody: string | undefined;
+    server.use(
+      http.delete(`${PLATFORM}/:source/delete/:shop`, async ({ request }) => {
+        deleteCount += 1;
+        capturedUrl = request.url;
+        capturedMethod = request.method;
+        capturedBody = await request.text();
+        return HttpResponse.json({});
+      }),
+    );
+    const rawShop = "acme store with spaces";
+    const encodedShop = encodeURIComponent(rawShop);
+    const mod = await import("../../lib/tools/delete-integration-source");
+    const result = await mod.spec.handler(auth, {
+      source: "shopify",
+      shop_name: rawShop,
+      confirm: true,
+      environment: "production",
+    });
+
+    expect(deleteCount).toBe(1);
+    expect(capturedMethod).toBe("DELETE");
+    expect(capturedUrl).toBeDefined();
+    expect(capturedUrl!.includes(encodedShop)).toBe(true);
+    // The raw form (with literal spaces) MUST NOT appear unencoded in the URL.
+    expect(capturedUrl!.includes(rawShop)).toBe(false);
+    expect(capturedUrl!.includes("/shopify/delete/")).toBe(true);
+    expect(capturedBody).toBe("");
+
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    const parsed = JSON.parse(first.text) as Record<string, unknown>;
+    expect(parsed.ok).toBe(true);
+    expect(parsed.deleted).toEqual({ source: "shopify", shop_name: rawShop });
+    expect(parsed.upstream_status).toBe(200);
+  });
+
+  it("[5] missing auth.userId → throws Error, NO upstream DELETE", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.delete(`${PLATFORM}/:source/delete/:shop`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-integration-source");
+    await expect(
+      mod.spec.handler(authAnon, {
+        source: "shopify",
+        shop_name: "acme",
+        confirm: true,
+        environment: "production",
+      }),
+    ).rejects.toThrow(/authenticated user/);
+    expect(deleteCount).toBe(0);
+  });
+
+  it("schema rejects source: 'magento' (enum-bound; path-injection guard)", async () => {
+    const mod = await import("../../lib/tools/delete-integration-source");
+    const parsed = mod.spec.inputSchema.safeParse({
+      source: "magento",
+      shop_name: "acme",
+      confirm: true,
+      environment: "production",
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// delete_salla_connection (INTG-22)
+// -----------------------------------------------------------------------------
+
+describe("delete_salla_connection", () => {
+  it("[1] confirm missing → isError, NO upstream DELETE", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.delete(`${PLATFORM}/integrations/connections/:rest*`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-salla-connection");
+    const result = await mod.spec.handler(auth, {
+      id: "c-abc123",
+      environment: "production",
+    });
+    expect(deleteCount).toBe(0);
+    expect((result as { isError?: boolean }).isError).toBe(true);
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    expect(first.text).toContain("delete_salla_connection");
+    expect(first.text).toContain("confirm: true");
+    expect(first.text).toContain("c-abc123");
+  });
+
+  it("[2] confirm: false → isError, NO upstream DELETE (defense-in-depth)", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.delete(`${PLATFORM}/integrations/connections/:rest*`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-salla-connection");
+    const result = await mod.spec.handler(auth, {
+      id: "c-abc123",
+      confirm: false,
+      environment: "production",
+    });
+    expect(deleteCount).toBe(0);
+    expect((result as { isError?: boolean }).isError).toBe(true);
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    expect(first.text).toContain("confirm: true");
+  });
+
+  it("[3] confirm: true + dry_run: true → preview, NO upstream DELETE", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.delete(`${PLATFORM}/integrations/connections/:rest*`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-salla-connection");
+    const result = await mod.spec.handler(auth, {
+      id: "c-abc123",
+      confirm: true,
+      dry_run: true,
+      environment: "production",
+    });
+    expect(deleteCount).toBe(0);
+    expect((result as { isError?: boolean }).isError).toBeFalsy();
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    const parsed = JSON.parse(first.text) as Record<string, unknown>;
+    expect(parsed.ok).toBe(true);
+    expect(parsed.dry_run).toBe(true);
+    expect(parsed.would_delete).toEqual({ id: "c-abc123" });
+    expect(typeof parsed.note).toBe("string");
+  });
+
+  it("[4] confirm: true only → EXACTLY ONE DELETE with encoded id, no body", async () => {
+    let deleteCount = 0;
+    let capturedUrl: string | undefined;
+    let capturedMethod: string | undefined;
+    let capturedBody: string | undefined;
+    server.use(
+      http.delete(
+        `${PLATFORM}/integrations/connections/:rest*`,
+        async ({ request }) => {
+          deleteCount += 1;
+          capturedUrl = request.url;
+          capturedMethod = request.method;
+          capturedBody = await request.text();
+          return HttpResponse.json({});
+        },
+      ),
+    );
+    // id contains "/" — must be percent-encoded so the upstream sees a
+    // single path segment rather than nested routing.
+    const rawId = "conn/with/slash";
+    const encodedId = encodeURIComponent(rawId);
+    const mod = await import("../../lib/tools/delete-salla-connection");
+    const result = await mod.spec.handler(auth, {
+      id: rawId,
+      confirm: true,
+      environment: "production",
+    });
+
+    expect(deleteCount).toBe(1);
+    expect(capturedMethod).toBe("DELETE");
+    expect(capturedUrl).toBeDefined();
+    expect(capturedUrl!.includes(encodedId)).toBe(true);
+    // The raw "/" form MUST NOT appear unencoded in the path segment after
+    // /integrations/connections/.
+    expect(
+      capturedUrl!.includes(`/integrations/connections/${rawId}`),
+    ).toBe(false);
+    expect(capturedBody).toBe("");
+
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    const parsed = JSON.parse(first.text) as Record<string, unknown>;
+    expect(parsed.ok).toBe(true);
+    expect(parsed.deleted).toEqual({ id: rawId });
+    expect(parsed.upstream_status).toBe(200);
+  });
+
+  it("[5] missing auth.userId → throws Error, NO upstream DELETE", async () => {
+    let deleteCount = 0;
+    server.use(
+      http.delete(`${PLATFORM}/integrations/connections/:rest*`, () => {
+        deleteCount += 1;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/delete-salla-connection");
+    await expect(
+      mod.spec.handler(authAnon, {
+        id: "c-abc123",
+        confirm: true,
+        environment: "production",
+      }),
+    ).rejects.toThrow(/authenticated user/);
+    expect(deleteCount).toBe(0);
+  });
+});

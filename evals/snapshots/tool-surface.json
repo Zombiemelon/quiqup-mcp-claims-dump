@@ -14,6 +14,8 @@
     "create_partner_address": "enabled",
     "create_product": "enabled",
     "decide_feature_flags_bulk": "enabled",
+    "delete_integration_source": "enabled",
+    "delete_salla_connection": "enabled",
     "get_account": "enabled",
     "get_account_by_id": "enabled",
     "get_account_capabilities": "enabled",

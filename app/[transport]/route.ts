@@ -79,13 +79,17 @@ import { spec as listWoocommerceShippingLinesSpec } from "@/lib/tools/list-wooco
 import { spec as setupWoocommerceConnectionSpec } from "@/lib/tools/setup-woocommerce-connection";
 import { spec as upsertWoocommerceConfigSpec } from "@/lib/tools/upsert-woocommerce-config";
 
-// Phase 2: Salla integration (INTG-20/21/23/24/25/26 — INTG-22 destructive lands in plan 02-05).
+// Phase 2: Salla integration (INTG-20/21/23/24/25/26).
 import { spec as installSallaSpec } from "@/lib/tools/install-salla";
 import { spec as getSallaConnectionSpec } from "@/lib/tools/get-salla-connection";
 import { spec as getSallaPlatformDataSpec } from "@/lib/tools/get-salla-platform-data";
 import { spec as getSallaConfigSpec } from "@/lib/tools/get-salla-config";
 import { spec as updateSallaConfigSpec } from "@/lib/tools/update-salla-config";
 import { spec as toggleSallaFulfillmentSpec } from "@/lib/tools/toggle-salla-fulfillment";
+
+// Phase 2: DESTRUCTIVE deletes (INTG-02, INTG-22) — confirm:true gated.
+import { spec as deleteIntegrationSourceSpec } from "@/lib/tools/delete-integration-source";
+import { spec as deleteSallaConnectionSpec } from "@/lib/tools/delete-salla-connection";
 
 // M3 thin pass-through enabled writes.
 // TODO(M4): cassette + output schemas + error mapping for these.
@@ -196,13 +200,17 @@ const handler = createMcpHandler(
     registerTool(server, setupWoocommerceConnectionSpec);
     registerTool(server, upsertWoocommerceConfigSpec);
 
-    // -- Phase 2: Salla integration (INTG-20/21/23/24/25/26 — INTG-22 destructive lands in plan 02-05) --
+    // -- Phase 2: Salla integration (INTG-20/21/23/24/25/26) --
     registerTool(server, installSallaSpec);
     registerTool(server, getSallaConnectionSpec);
     registerTool(server, getSallaPlatformDataSpec);
     registerTool(server, getSallaConfigSpec);
     registerTool(server, updateSallaConfigSpec);
     registerTool(server, toggleSallaFulfillmentSpec);
+
+    // -- Phase 2: DESTRUCTIVE deletes (INTG-02, INTG-22) — confirm:true gated --
+    registerTool(server, deleteIntegrationSourceSpec);
+    registerTool(server, deleteSallaConnectionSpec);
 
     // -- M3 enabled writes: thin pass-through (TODO(M4)/M6 hardening) --
     registerTool(server, createLastmileOrderSpec);
