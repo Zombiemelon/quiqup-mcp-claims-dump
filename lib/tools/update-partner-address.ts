@@ -43,7 +43,19 @@ const inputSchema = z.object({
     .length(2, "country must be ISO-3166 alpha-2 (e.g. 'AE')")
     .optional()
     .describe("ISO-3166 alpha-2 country code, e.g. 'AE'"),
-  coordinates: z.object({ lat: coordinate, lng: coordinate }).optional(),
+  coordinates: z
+    .object({
+      lat: coordinate.optional(),
+      lng: coordinate.optional(),
+    })
+    .refine((c) => c.lat !== undefined || c.lng !== undefined, {
+      message: "coordinates: supply lat, lng, or both",
+    })
+    .optional()
+    .describe(
+      "Partial-update friendly: supply lat, lng, or both. Omitting either " +
+        "leaves the existing upstream value unchanged.",
+    ),
   contact_name: z.string().optional(),
   contact_phone: z.string().optional(),
   label: z.string().optional(),
@@ -93,10 +105,17 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     if (args.town !== undefined) body.town = args.town;
     if (args.country !== undefined) body.country = args.country;
     if (args.coordinates !== undefined) {
-      body.coordinates = {
-        lat: String(args.coordinates.lat),
-        lng: String(args.coordinates.lng),
-      };
+      // Partial-update semantics: only forward the lat / lng the caller
+      // actually supplied. Sending `undefined` (or "undefined") for the
+      // omitted axis would overwrite upstream state.
+      const coordsOut: Record<string, string> = {};
+      if (args.coordinates.lat !== undefined) {
+        coordsOut.lat = String(args.coordinates.lat);
+      }
+      if (args.coordinates.lng !== undefined) {
+        coordsOut.lng = String(args.coordinates.lng);
+      }
+      body.coordinates = coordsOut;
     }
     if (args.contact_name !== undefined) body.contact_name = args.contact_name;
     if (args.contact_phone !== undefined) body.contact_phone = args.contact_phone;
