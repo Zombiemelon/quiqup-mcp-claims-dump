@@ -56,6 +56,13 @@ import { spec as getReturnSettingsSpec } from "@/lib/tools/get-return-settings";
 import { spec as updateReturnSettingsSpec } from "@/lib/tools/update-return-settings";
 import { spec as createAccountTeamMemberSpec } from "@/lib/tools/create-account-team-member";
 
+// Phase 2: shared integrations surface (INTG-01/03/04/05/06).
+import { spec as listIntegrationConnectionsSpec } from "@/lib/tools/list-integration-connections";
+import { spec as listIntegrationOrderReasonsSpec } from "@/lib/tools/list-integration-order-reasons";
+import { spec as repairIntegrationOrdersSpec } from "@/lib/tools/repair-integration-orders";
+import { spec as getIntegrationOrderSpec } from "@/lib/tools/get-integration-order";
+import { spec as confirmFfExportSpec } from "@/lib/tools/confirm-ff-export";
+
 // M3 thin pass-through enabled writes.
 // TODO(M4): cassette + output schemas + error mapping for these.
 // TODO(M6): retroactive scope/audit/idempotency guardrails.
@@ -141,6 +148,13 @@ const handler = createMcpHandler(
     registerTool(server, getReturnSettingsSpec);
     registerTool(server, updateReturnSettingsSpec);
     registerTool(server, createAccountTeamMemberSpec);
+
+    // -- Phase 2: shared integrations surface (INTG-01/03/04/05/06) --
+    registerTool(server, listIntegrationConnectionsSpec);
+    registerTool(server, listIntegrationOrderReasonsSpec);
+    registerTool(server, repairIntegrationOrdersSpec);
+    registerTool(server, getIntegrationOrderSpec);
+    registerTool(server, confirmFfExportSpec);
 
     // -- M3 enabled writes: thin pass-through (TODO(M4)/M6 hardening) --
     registerTool(server, createLastmileOrderSpec);
