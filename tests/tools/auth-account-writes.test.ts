@@ -118,6 +118,29 @@ describe("update_account", () => {
     expect(mod.spec.description).toContain("update_bank_details");
     expect(mod.spec.description).toContain("get_account");
   });
+
+  it("schema-parses raw args (locks in environment .default('production'))", async () => {
+    let captured: URL | undefined;
+    server.use(
+      http.put(`${PLATFORM}/accounts`, async ({ request }) => {
+        captured = new URL(request.url);
+        return HttpResponse.json({ id: "acct_123" });
+      }),
+    );
+    const mod = await import("../../lib/tools/update-account");
+    // Caller omits `environment` — .default("production") should land it.
+    const parsed = mod.spec.inputSchema.safeParse({
+      display_name: "Acme Partner",
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.environment).toBe("production");
+    const result = await mod.spec.handler(auth, parsed.data);
+    expect(captured?.host).toBe("platform-api.quiqup.com");
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    expect(first.text).toContain("acct_123");
+  });
 });
 
 describe("decide_feature_flags_bulk", () => {
@@ -285,6 +308,28 @@ describe("update_return_settings", () => {
         environment: "production",
       }),
     ).rejects.toThrow(/authenticated user/);
+  });
+
+  it("schema-parses raw args (locks in account_id .default('me') and environment .default('production'))", async () => {
+    let capturedUrl: URL | undefined;
+    server.use(
+      http.put(`${PLATFORM}/api/accounts/me/return-settings`, async ({ request }) => {
+        capturedUrl = new URL(request.url);
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    const mod = await import("../../lib/tools/update-return-settings");
+    // Caller omits BOTH account_id and environment — both defaults must
+    // land via the Zod parse, not via the LLM's good behaviour.
+    const parsed = mod.spec.inputSchema.safeParse({
+      return_window_days: 14,
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.account_id).toBe("me");
+    expect(parsed.data.environment).toBe("production");
+    await mod.spec.handler(auth, parsed.data);
+    expect(capturedUrl?.pathname).toBe("/api/accounts/me/return-settings");
   });
 });
 
