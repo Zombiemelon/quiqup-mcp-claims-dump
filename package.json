@@ -18,6 +18,9 @@
     "eval:tool-surface": "bun run evals/tool-surface.ts",
     "eval:get-account": "bun run evals/get-account.ts",
     "eval:lookup-google-place": "bun run evals/lookup-google-place.ts",
+    "eval:integrations-shared": "bun run evals/integrations-shared.ts",
+    "eval:shopify-integration": "bun run evals/shopify-integration.ts",
+    "eval:woocommerce-integration": "bun run evals/woocommerce-integration.ts",
     "browserbase:create-context": "bun run scripts/browserbase-create-context.ts",
     "browserbase:bootstrap-login": "bun run scripts/quiqup-bootstrap-login.ts",
     "inspect:orders-filter": "bun run scripts/inspect-orders-filter.ts"
