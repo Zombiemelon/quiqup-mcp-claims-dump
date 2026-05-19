@@ -14,7 +14,7 @@
  *   - list_courier_failure_reasons:    ?delivery_type=<v>
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "../setup/msw";
 
@@ -44,8 +44,23 @@ const authAnon = {
 
 const PLATFORM = "https://platform-api.quiqup.com";
 
+// Capture and clear QUIQUP_PLATFORM_API_BASE_URL so a developer with the var
+// set in their shell does not silently route fetches around MSW (the
+// handlers below are bound to the production host). Mirrors the
+// GOOGLE_PLACES_BASE_URL pattern in google-places.test.ts.
+const originalPlatformUrl = process.env.QUIQUP_PLATFORM_API_BASE_URL;
+
 beforeEach(() => {
   vi.clearAllMocks();
+  delete process.env.QUIQUP_PLATFORM_API_BASE_URL;
+});
+
+afterEach(() => {
+  if (originalPlatformUrl === undefined) {
+    delete process.env.QUIQUP_PLATFORM_API_BASE_URL;
+  } else {
+    process.env.QUIQUP_PLATFORM_API_BASE_URL = originalPlatformUrl;
+  }
 });
 
 describe("list_account_addresses", () => {
