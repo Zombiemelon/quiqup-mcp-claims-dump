@@ -98,6 +98,53 @@ describe("list_woocommerce_connections", () => {
     expect(first.text).toContain("site_url");
   });
 
+  // 02-REVIEW BL-01 / WR-06: `token` is a bearer credential; the two
+  // `*_webhook_secret` fields are HMAC signing keys an attacker could use to
+  // forge order webhooks into the platform. None of the three may reach the
+  // LLM.
+  it("strips `token` and webhook secrets from the response", async () => {
+    const sensitivePayload = {
+      connections: [
+        {
+          shop_name: "acme",
+          site_url: "https://acme.example.com",
+          is_fulfillment: true,
+          token: "tkn_x",
+          user_id: "u_123",
+          order_created_webhook_id: "wh_c_1",
+          order_created_webhook_secret: "ocs_canary_xxx",
+          order_updated_webhook_id: "wh_u_1",
+          order_updated_webhook_secret: "ous_canary_xxx",
+          webhooks: [],
+        },
+      ],
+    };
+    server.use(
+      http.get(`${PLATFORM}/woocommerce/connections`, () =>
+        HttpResponse.json(sensitivePayload),
+      ),
+    );
+    const mod = await import("../../lib/tools/list-woocommerce-connections");
+    const result = await mod.spec.handler(auth, {
+      environment: "production",
+    });
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    // None of the canary values are echoed back.
+    expect(first.text).not.toContain("tkn_x");
+    expect(first.text).not.toContain("ocs_canary_xxx");
+    expect(first.text).not.toContain("ous_canary_xxx");
+    const parsed = JSON.parse(first.text);
+    const c = parsed.connections[0];
+    expect(c.token).toBeUndefined();
+    expect(c.order_created_webhook_secret).toBeUndefined();
+    expect(c.order_updated_webhook_secret).toBeUndefined();
+    // Webhook ids (not secrets) are still present.
+    expect(c.order_created_webhook_id).toBe("wh_c_1");
+    expect(c.order_updated_webhook_id).toBe("wh_u_1");
+    expect(c.shop_name).toBe("acme");
+  });
+
   it("throws QuiqupHttpError on upstream 401", async () => {
     server.use(
       http.get(`${PLATFORM}/woocommerce/connections`, () =>

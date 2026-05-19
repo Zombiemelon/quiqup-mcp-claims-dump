@@ -105,6 +105,27 @@ describe("list_integration_connections", () => {
     expect(parsed.connections[0].source).toBe("shopify");
   });
 
+  // 02-REVIEW BL-01: the per-connection `token` field is upstream-bearer and
+  // must NEVER reach the LLM. Mirrors the T-02-29 invariant the Salla family
+  // already enforces in `get-salla-connection.ts`.
+  it("strips per-connection `token` from the response", async () => {
+    server.use(
+      http.get(`${PLATFORM}/integrations/connections`, () =>
+        HttpResponse.json(payload),
+      ),
+    );
+    const mod = await import("../../lib/tools/list-integration-connections");
+    const result = await mod.spec.handler(auth, { environment: "production" });
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    expect(first.text).not.toContain("tkn_x");
+    const parsed = JSON.parse(first.text);
+    expect(parsed.connections[0].token).toBeUndefined();
+    // Non-sensitive fields are still present.
+    expect(parsed.connections[0].shop_name).toBe("acme");
+    expect(parsed.connections[0].source).toBe("shopify");
+  });
+
   it("throws QuiqupHttpError on upstream 401", async () => {
     server.use(
       http.get(`${PLATFORM}/integrations/connections`, () =>

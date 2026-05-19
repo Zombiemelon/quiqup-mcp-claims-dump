@@ -209,10 +209,71 @@ export const quiqupVsWoocommerceStateDisambiguation: Evaluator = async () => {
   };
 };
 
+/**
+ * STATIC source-inspection: secret-omission contract on
+ * list_woocommerce_connections (02-REVIEW BL-01 + WR-06).
+ *
+ * Asserts the WooCommerce list tool strips `token` AND both
+ * `order_created_webhook_secret` and `order_updated_webhook_secret` before
+ * returning to the LLM. The webhook secrets are HMAC signing keys — even
+ * more dangerous than `token` because they let an attacker forge order
+ * webhooks back into the platform.
+ */
+const LIST_WOOCOMMERCE_CONNECTIONS_SOURCE_PATH =
+  "lib/tools/list-woocommerce-connections.ts";
+
+export const listWooCommerceConnectionsSecretOmission: Evaluator = async () => {
+  const { readFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+
+  const failures: string[] = [];
+  let raw: string;
+  try {
+    raw = await readFile(
+      path.resolve(process.cwd(), LIST_WOOCOMMERCE_CONNECTIONS_SOURCE_PATH),
+      "utf-8",
+    );
+  } catch (err) {
+    return {
+      name: "list-woocommerce-connections-secret-omission",
+      value: 0.0,
+      comment: `read failed for ${LIST_WOOCOMMERCE_CONNECTIONS_SOURCE_PATH}: ${(err as Error).message}`,
+    };
+  }
+
+  // Anchor on the SENSITIVE_KEYS Set declaration AND every key it must
+  // contain — a maintainer who removes any single key trips the gate.
+  const requiredAnchors = [
+    "SENSITIVE_KEYS",
+    '"token"',
+    '"order_created_webhook_secret"',
+    '"order_updated_webhook_secret"',
+    "connectionsSafe",
+    "JSON.stringify({ connections: connectionsSafe",
+  ];
+  for (const anchor of requiredAnchors) {
+    if (!raw.includes(anchor)) {
+      failures.push(
+        `${LIST_WOOCOMMERCE_CONNECTIONS_SOURCE_PATH}: missing ${JSON.stringify(anchor)} (BL-01/WR-06 secret strip)`,
+      );
+    }
+  }
+
+  return {
+    name: "list-woocommerce-connections-secret-omission",
+    value: failures.length === 0 ? 1.0 : 0.0,
+    comment:
+      failures.length === 0
+        ? "list-woocommerce-connections.ts strips token + both webhook secrets before returning"
+        : `failures: ${failures.join("; ")}`,
+  };
+};
+
 export const evaluators = [
   toolNameMatch,
   requiredFieldsPresent,
   argsOverlap,
   descriptionQuality,
   quiqupVsWoocommerceStateDisambiguation,
+  listWooCommerceConnectionsSecretOmission,
 ];

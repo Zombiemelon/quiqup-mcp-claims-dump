@@ -87,9 +87,24 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       throw new QuiqupHttpError(res.status, await res.text());
     }
 
-    const data = await res.json();
+    // Drop the upstream per-connection `token` field defensively before it
+    // ever reaches the LLM. The cross-family catalog mixes Shopify, WooCommerce
+    // and Salla bearer tokens; matching the T-02-29 invariant the Salla family
+    // already enforces in `get-salla-connection.ts` (02-REVIEW BL-01).
+    const body = (await res.json()) as {
+      connections?: Array<Record<string, unknown> & { token?: unknown }>;
+    };
+    const connectionsSafe = (body.connections ?? []).map(
+      ({ token: _token, ...rest }) => rest,
+    );
+
     return {
-      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({ connections: connectionsSafe }, null, 2),
+        },
+      ],
     };
   },
 };

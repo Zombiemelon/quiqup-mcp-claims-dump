@@ -73,9 +73,33 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       throw new QuiqupHttpError(res.status, await res.text());
     }
 
-    const data = await res.json();
+    // Strip credentials defensively before the response reaches the LLM
+    // (02-REVIEW BL-01, WR-06). The WooCommerce webhook secrets in particular
+    // are higher-impact than `token`: a leaked signing secret lets an attacker
+    // forge `order.created` / `order.updated` events into the platform.
+    const SENSITIVE_KEYS = new Set([
+      "token",
+      "order_created_webhook_secret",
+      "order_updated_webhook_secret",
+    ]);
+    const body = (await res.json()) as {
+      connections?: Array<Record<string, unknown>>;
+    };
+    const connectionsSafe = (body.connections ?? []).map((c) => {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(c)) {
+        if (!SENSITIVE_KEYS.has(k)) out[k] = v;
+      }
+      return out;
+    });
+
     return {
-      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({ connections: connectionsSafe }, null, 2),
+        },
+      ],
     };
   },
 };

@@ -202,9 +202,76 @@ export const descriptionQuality: Evaluator = async () => {
   };
 };
 
+/**
+ * STATIC source-inspection: token-omission contract on
+ * list_integration_connections (02-REVIEW BL-01).
+ *
+ * Mirrors the Salla family's `tokenOmission` scorer at
+ * `evals/score-salla-integration.ts`, but for the cross-family catalog —
+ * `list_integration_connections` aggregates Shopify, WooCommerce, AND Salla
+ * connections, so a regression here re-leaks every family's bearer
+ * simultaneously.
+ *
+ * Asserts the source contains the destructure-and-discard pattern
+ * (`{ token: _token, ...rest }` style) AND ships `connectionsSafe` on the
+ * return path. A maintainer who removes the strip cannot land it without
+ * also editing this scorer.
+ */
+const LIST_INTEGRATION_CONNECTIONS_SOURCE_PATH =
+  "lib/tools/list-integration-connections.ts";
+
+export const listConnectionsTokenOmission: Evaluator = async () => {
+  const { readFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+
+  const failures: string[] = [];
+  let raw: string;
+  try {
+    raw = await readFile(
+      path.resolve(process.cwd(), LIST_INTEGRATION_CONNECTIONS_SOURCE_PATH),
+      "utf-8",
+    );
+  } catch (err) {
+    return {
+      name: "list-connections-token-omission",
+      value: 0.0,
+      comment: `read failed for ${LIST_INTEGRATION_CONNECTIONS_SOURCE_PATH}: ${(err as Error).message}`,
+    };
+  }
+
+  // Anchor on the destructure-discard binding (the LOAD-BEARING bit) and the
+  // sanitised array on the return path. Allow either `_token` or
+  // `token: _token` style.
+  if (!raw.includes("token: _token")) {
+    failures.push(
+      `${LIST_INTEGRATION_CONNECTIONS_SOURCE_PATH}: missing "token: _token" discard binding (BL-01 token strip)`,
+    );
+  }
+  if (!raw.includes("connectionsSafe")) {
+    failures.push(
+      `${LIST_INTEGRATION_CONNECTIONS_SOURCE_PATH}: missing "connectionsSafe" sanitised array (BL-01 token strip)`,
+    );
+  }
+  if (!raw.includes("JSON.stringify({ connections: connectionsSafe")) {
+    failures.push(
+      `${LIST_INTEGRATION_CONNECTIONS_SOURCE_PATH}: missing "JSON.stringify({ connections: connectionsSafe" on the return path`,
+    );
+  }
+
+  return {
+    name: "list-connections-token-omission",
+    value: failures.length === 0 ? 1.0 : 0.0,
+    comment:
+      failures.length === 0
+        ? "list-integration-connections.ts strips token via destructure-and-discard before returning"
+        : `failures: ${failures.join("; ")}`,
+  };
+};
+
 export const evaluators = [
   toolNameMatch,
   requiredFieldsPresent,
   argsOverlap,
   descriptionQuality,
+  listConnectionsTokenOmission,
 ];
