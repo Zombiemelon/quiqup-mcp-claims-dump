@@ -58,7 +58,12 @@ const inputSchema = z.object({
     .describe(
       "Mapping from Quiqup delivery method (quiqup_name) to Shopify " +
         "delivery method (shopify_name) — include shipping_method_id + " +
-        "shipping_profile_id from the live catalog (list_shopify_delivery_methods).",
+        "shipping_profile_id from the live catalog (list_shopify_delivery_methods). " +
+        "ARRAY-REPLACE semantics (02-REVIEW WR-08): if you supply this field, " +
+        "the upstream replaces the whole `delivery_methods[]` list with what " +
+        "you send. Read the current list first via `get_shopify_config`, " +
+        "splice / modify the items locally, then PUT the full updated array " +
+        "back. Each item MUST carry all four fields (the schema enforces this).",
     ),
   locations: z
     .array(
@@ -70,7 +75,10 @@ const inputSchema = z.object({
     .optional()
     .describe(
       "Mapping from Quiqup ship-from location to Shopify location code. " +
-        "Discover valid `shopify_location` values via `list_shopify_locations`.",
+        "Discover valid `shopify_location` values via `list_shopify_locations`. " +
+        "ARRAY-REPLACE semantics (02-REVIEW WR-08): same shape as " +
+        "delivery_methods[] — supplying this field replaces the whole list. " +
+        "Read with `get_shopify_config`, modify locally, PUT back in full.",
     ),
   auto_mark_as_rfc: z.boolean().optional(),
   fulfillment_state: z.string().optional(),
@@ -102,7 +110,11 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     "on platform-api.quiqup.com. " +
     "Response shape: `{ message, resolved_inventory_item_id? }`. " +
     "All fields except `shop_name` are optional — only the keys supplied are " +
-    "forwarded upstream (partial update). " +
+    "forwarded upstream (partial update at the TOP LEVEL). " +
+    "Note (02-REVIEW WR-08): the `delivery_methods[]` and `locations[]` " +
+    "arrays use ARRAY-REPLACE semantics when supplied — read the current " +
+    "list via `get_shopify_config` first, modify it locally, then PUT the " +
+    "full updated array back. " +
     "Companion reads: `get_shopify_config` (current SAVED mapping); " +
     "`list_shopify_delivery_methods` + `list_shopify_locations` (LIVE Shopify " +
     "catalogs — use to discover codes/ids when building delivery_methods[] / " +
