@@ -21,6 +21,8 @@
     "eval:integrations-shared": "bun run evals/integrations-shared.ts",
     "eval:shopify-integration": "bun run evals/shopify-integration.ts",
     "eval:woocommerce-integration": "bun run evals/woocommerce-integration.ts",
+    "eval:salla-integration": "bun run evals/salla-integration.ts",
+    "eval:destructive-integrations": "bun run evals/destructive-integrations.ts",
     "browserbase:create-context": "bun run scripts/browserbase-create-context.ts",
     "browserbase:bootstrap-login": "bun run scripts/quiqup-bootstrap-login.ts",
     "inspect:orders-filter": "bun run scripts/inspect-orders-filter.ts"
