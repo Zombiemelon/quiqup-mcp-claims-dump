@@ -140,9 +140,16 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       throw err;
     }
 
-    // 3. Dry-run short-circuit — runs AFTER confirm (dry_run cannot bypass
-    //    confirm; see T-02-39). Caller must have ALREADY passed confirm:true
-    //    to land here in dry-run mode.
+    // 3. JWT bridge — minted ABOVE the dry-run short-circuit (02-REVIEW WR-04)
+    //    so a dry-run preview also exercises the Clerk → Quiqup actor-token
+    //    bridge. Without this, an agent could dry-run a delete from a userId
+    //    whose `getQuiqupReadyJwt` would actually fail (revoked Clerk session,
+    //    mid-token-rotation) and get a green "would_delete" response.
+    const jwt = await getQuiqupReadyJwt(auth.userId);
+    const platformApiBase = getPlatformApiBaseUrl(args.environment);
+
+    // 4. Dry-run short-circuit — runs AFTER confirm + JWT mint (dry_run cannot
+    //    bypass confirm; see T-02-39).
     if (isDryRun(args)) {
       return {
         content: [
@@ -169,9 +176,8 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       };
     }
 
-    // 4. Live destructive path — mint JWT, fire DELETE.
-    const jwt = await getQuiqupReadyJwt(auth.userId);
-    const platformApiBase = getPlatformApiBaseUrl(args.environment);
+    // 5. Live destructive path — fire DELETE (jwt + platformApiBase already
+    //    minted above so dry-run exercises the bridge too).
     const res = await fetch(
       `${platformApiBase}/${encodeURIComponent(args.source)}/delete/${encodeURIComponent(args.shop_name)}`,
       {
