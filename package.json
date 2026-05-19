@@ -10,7 +10,10 @@
     "test:watch": "vitest",
     "test:integration": "RUN_INTEGRATION=1 vitest run",
     "eval:lastmile-orders": "bun run evals/lastmile-order-creation.ts",
-    "eval:lastmile-roundtrip": "bun run evals/lastmile-order-roundtrip.ts"
+    "eval:lastmile-roundtrip": "bun run evals/lastmile-order-roundtrip.ts",
+    "browserbase:create-context": "bun run scripts/browserbase-create-context.ts",
+    "browserbase:bootstrap-login": "bun run scripts/quiqup-bootstrap-login.ts",
+    "inspect:orders-filter": "bun run scripts/inspect-orders-filter.ts"
   },
   "dependencies": {
     "@clerk/mcp-tools": "^0.5.0",
@@ -25,6 +28,8 @@
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
     "@arizeai/openinference-instrumentation-anthropic": "^0.1.10",
+    "@browserbasehq/sdk": "^2.11.0",
+    "@browserbasehq/stagehand": "^3.4.0",
     "@clerk/backend": "^3.4.1",
     "@langfuse/client": "^5.3.0",
     "@langfuse/otel": "^5.3.0",
@@ -43,5 +48,6 @@
   "trustedDependencies": [
     "sharp",
     "unrs-resolver"
-  ]
+  ],
+  "packageManager": "pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017"
 }

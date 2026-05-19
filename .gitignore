@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# stagehand local browser profile (persists cookies between integration test runs)
+.stagehand-userdata/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
