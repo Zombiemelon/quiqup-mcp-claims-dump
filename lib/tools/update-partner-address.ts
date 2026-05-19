@@ -1,0 +1,104 @@
+/**
+ * `update_partner_address` — partial-update an existing partner address-book
+ * entry on platform-api.quiqup.com (Phase 1 / ADDR-03).
+ *
+ * Endpoint: PATCH https://platform-api.quiqup.com/partner/addresses/{id}
+ * Headers:  Authorization: Bearer <session-JWT> (Clerk → Quiqup actor-token bridge),
+ *           Accept: application/json, Content-Type: application/json
+ *
+ * Partial update semantics: only fields included in the call are mutated
+ * upstream — omitted fields are left as-is. Mirrors the `create_partner_address`
+ * shape (top-level scalars; no `references` field — see poison-memory note
+ * in create_partner_address.ts).
+ */
+
+import { z } from "zod";
+import type { ToolSpec } from "./register";
+import { getQuiqupReadyJwt } from "@/lib/quiqup";
+import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
+import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
+
+const coordinate = z.union([z.string(), z.number()]);
+
+const inputSchema = z.object({
+  id: z.string().min(1, "id is required"),
+  address1: z.string().optional(),
+  address2: z.string().optional(),
+  apartment_number: z.string().optional(),
+  town: z.string().optional(),
+  country: z
+    .string()
+    .min(2)
+    .optional()
+    .describe("ISO-3166 alpha-2 country code, e.g. 'AE'"),
+  coordinates: z.object({ lat: coordinate, lng: coordinate }).optional(),
+  contact_name: z.string().optional(),
+  contact_phone: z.string().optional(),
+  label: z.string().optional(),
+  environment: environmentField,
+});
+
+const outputSchema = z.object({}).passthrough();
+
+export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
+  name: "update_partner_address",
+  description:
+    "Partial update of a partner address-book entry. " +
+    "Endpoint: PATCH platform-api.quiqup.com/partner/addresses/{id}. " +
+    "Partial update; only fields included in the call are mutated upstream. " +
+    "Mirrors `create_partner_address`'s shape (top-level scalars only — do " +
+    "NOT pass a `references` array; see poison-memory note). " +
+    "Use `list_account_addresses` afterward to confirm the patch landed. " +
+    "Error modes: 401/403 = auth issue (run `whoami_platform`); 404 = the " +
+    "address id is not visible to this user; 422 = validation failure on " +
+    "the supplied fields. " +
+    'Example: `{ "id": "addr_123", "label": "Renamed Warehouse" }`.',
+  inputSchema,
+  outputSchema,
+  handler: async (auth, args) => {
+    if (!auth.userId) {
+      throw new Error("update_partner_address requires an authenticated user");
+    }
+    const jwt = await getQuiqupReadyJwt(auth.userId);
+    const platformApiBase = getPlatformApiBaseUrl(args.environment);
+
+    const body: Record<string, unknown> = {};
+    if (args.address1 !== undefined) body.address1 = args.address1;
+    if (args.address2 !== undefined) body.address2 = args.address2;
+    if (args.apartment_number !== undefined)
+      body.apartment_number = args.apartment_number;
+    if (args.town !== undefined) body.town = args.town;
+    if (args.country !== undefined) body.country = args.country;
+    if (args.coordinates !== undefined) {
+      body.coordinates = {
+        lat: String(args.coordinates.lat),
+        lng: String(args.coordinates.lng),
+      };
+    }
+    if (args.contact_name !== undefined) body.contact_name = args.contact_name;
+    if (args.contact_phone !== undefined) body.contact_phone = args.contact_phone;
+    if (args.label !== undefined) body.label = args.label;
+
+    const res = await fetch(
+      `${platformApiBase}/partner/addresses/${encodeURIComponent(args.id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!res.ok) {
+      throw new QuiqupHttpError(res.status, await res.text());
+    }
+
+    const data = await res.json();
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+    };
+  },
+};
