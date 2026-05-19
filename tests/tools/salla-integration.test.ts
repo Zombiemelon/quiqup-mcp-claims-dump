@@ -113,6 +113,16 @@ describe("install_salla", () => {
       mod.spec.handler(authAnon, { environment: "production" }),
     ).rejects.toThrow(/authenticated user/);
   });
+
+  // 02-REVIEW WR-03: this tool initiates an OAuth flow — must carry
+  // `audit: true` AND a rate-limit. A pure read tool would skip both, but
+  // install_salla is closer to a transactional write.
+  it("declares audit + rate-limit guardrails (WR-03)", async () => {
+    const mod = await import("../../lib/tools/install-salla");
+    expect(mod.spec.guardrails?.audit).toBe(true);
+    expect(mod.spec.guardrails?.rateLimit).toBeDefined();
+    expect(mod.spec.guardrails?.rateLimit?.capacity).toBeGreaterThan(0);
+  });
 });
 
 describe("get_salla_connection", () => {

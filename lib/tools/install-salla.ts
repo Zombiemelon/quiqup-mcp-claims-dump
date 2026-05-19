@@ -52,6 +52,16 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     'Example: `{ "environment": "production" }`.',
   inputSchema,
   outputSchema,
+  // 02-REVIEW WR-03: this tool initiates an OAuth handshake — pattern-match
+  // it to a write rather than a pure read. `audit: true` captures every
+  // install attempt; a modest 10/min rate-limit bounds runaway agents that
+  // would otherwise consume Salla-side `state` tokens at 10/sec. No
+  // idempotency key — the upstream returns the same flow URL for repeated
+  // calls within a session.
+  guardrails: {
+    rateLimit: { capacity: 10, refillPerSec: 10 / 60 },
+    audit: true,
+  },
   handler: async (auth, args) => {
     if (!auth.userId) {
       throw new Error("install_salla requires an authenticated user");
