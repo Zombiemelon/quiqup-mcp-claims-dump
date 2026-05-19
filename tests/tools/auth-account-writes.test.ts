@@ -200,6 +200,32 @@ describe("decide_feature_flags_bulk", () => {
       }),
     ).rejects.toThrow(/authenticated user/);
   });
+
+  it("ignores smuggled Identifier in raw args (T-01-18 regression guard)", async () => {
+    // The handler signature is `(auth, z.input<TInput>)` — the SDK pre-handler
+    // parse strips unknown keys, BUT a future refactor that spreads raw args
+    // into the upstream body would silently break the invariant. This test
+    // bypasses TS via `as never` and confirms the body still carries
+    // auth.userId even when args carry a malicious Identifier field.
+    let captured: Record<string, unknown> | undefined;
+    server.use(
+      http.post(`${PLATFORM}/featureflags/decide-bulk`, async ({ request }) => {
+        captured = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({});
+      }),
+    );
+    const mod = await import("../../lib/tools/decide-feature-flags-bulk");
+    await mod.spec.handler(auth, {
+      features: ["new_dashboard"],
+      environment: "production",
+      Identifier: "victim_account",
+    } as never);
+    expect(captured).toBeDefined();
+    // CRITICAL: Identifier MUST be the caller's auth.userId, never the
+    // smuggled value.
+    expect(captured!.Identifier).toBe("user_test");
+    expect(captured!.Identifier).not.toBe("victim_account");
+  });
 });
 
 describe("get_return_settings", () => {
