@@ -10,19 +10,19 @@
 ## Current Position
 
 - **current_phase:** 2
-- **current_plan:** 02-05 (next)
-- **status:** in-progress (Phase 2 Waves 1 + 2 + 3 + 4 complete; Shopify + WooCommerce + Salla non-destructive families landed)
-- **progress:** Phase 2: 4/6 plans complete — Mintsoft/SBL + Salla-destructive (INTG-22) still pending
+- **current_plan:** 02-06 (next)
+- **status:** in-progress (Phase 2 Waves 1 + 2 + 3 + 4 + 5 complete; destructive-gate canonical helper landed + INTG-02/22 shipped)
+- **progress:** Phase 2: 5/6 plans complete — only Langfuse eval-coverage wave (02-06) remaining
 
 ```
-[███                 ] 18% (Phase 1 complete + Phase 2 4/6 plans)
+[████                ] 20% (Phase 1 complete + Phase 2 5/6 plans)
 ```
 
 ## Performance Metrics
 
 - Phases completed: 1 (Phase 1)
-- Plans completed: 8 (01-01..01-04, 02-01, 02-02, 02-03, 02-04)
-- Requirements shipped (v1): see REQUIREMENTS.md (02-04 adds INTG-20/21/23/24/25/26 — INTG-22 deferred to 02-05)
+- Plans completed: 9 (01-01..01-04, 02-01, 02-02, 02-03, 02-04, 02-05)
+- Requirements shipped (v1): see REQUIREMENTS.md (02-05 adds INTG-02 + INTG-22 — destructive deletes + canonical confirm:true gate)
 - Service-host families with Langfuse eval: 4 (Platform/lastmile via create_lastmile_order, Fulfilment via baseline, Platform-reads via get_account, Google Places via lookup_google_place)
 
 ### Plan Execution Log
@@ -37,6 +37,7 @@
 | 02    | 02   | ~10m    | 3     | 9     | 2026-05-19 |
 | 02    | 03   | ~25m    | 3     | 9     | 2026-05-19 |
 | 02    | 04   | ~20m    | 3     | 9     | 2026-05-19 |
+| 02    | 05   | ~15m    | 3     | 6     | 2026-05-19 |
 
 ## Accumulated Context
 
@@ -60,6 +61,11 @@
 - 2026-05-19 (02-04): `get_salla_config` returns STRUCTURED `{ config: null, message }` on upstream 404 rather than throwing QuiqupHttpError (T-02-30). 404 here means "no config saved yet" — agent can immediately call `update_salla_config` without parsing an HTTP error. All other non-2xx (401/403/422/5xx) still throw.
 - 2026-05-19 (02-04): `update_salla_config.delivery_methods[].service_kind` is z.string() (free-form) with description-pin to `list_service_kinds` (Phase 1 AUTH-08). Per threat-register T-02-33 accept disposition — duplicating the enum would create drift surface for a read-time taxonomy that may grow.
 - 2026-05-19 (02-04): INTG-22 (`delete_salla_connection`) deliberately deferred to plan 02-05 — it requires the canonical `confirm:true` destructive gate that the next wave establishes.
+- 2026-05-19 (02-05): The canonical destructive-gate helpers (`requireConfirm`, `destructiveConfirmField`, `destructiveDryRunField`, `isDryRun`, `ConfirmationRequiredError`, `buildConfirmationRequiredResult`) ship at `lib/middleware/destructive.ts`. Future destructive tools in Phases 4 (batch status transitions), 6 (cancel_inbound + delete_products), 8 (delete_dispatcher_rule_set), 10 (delete_stripe_payment_method) MUST import these exports rather than re-deriving the contract — uniform LLM behaviour across the destructive surface depends on it.
+- 2026-05-19 (02-05): Destructive tools layer auth BEFORE confirm BEFORE dry_run BEFORE upstream call (T-02-37/38/39). `dry_run` cannot bypass `confirm` — to exercise dry-run the caller MUST set `confirm: true` AND `dry_run: true`. Semantic: dry-run is "I have already confirmed; show me what would happen" — not "skip confirm because I'm only previewing".
+- 2026-05-19 (02-05): Rate limit on destructive tools set to TIGHT 3/min (matching `cancel_lastmile_orders_batch`) — deletions are irreversible and rare-by-design. Combined with `confirm: true` requirement, a runaway agent cannot sweep connections.
+- 2026-05-19 (02-05): MSW request-count assertion on the negative paths (confirm missing / confirm:false / missing auth) proves the gate runs client-side — ZERO upstream traffic on any rejected destructive call.
+- 2026-05-19 (02-05): PROJECT.md "Destructive endpoints gated with explicit confirmation parameters" key-decision row can now flip from `[ ]` to `[x]` — flagged for the user to flip in a project-status pass (do NOT flip from inside this plan).
 
 ### Todos
 
@@ -71,9 +77,9 @@
 
 ## Session Continuity
 
-- **Last session:** 2026-05-19 — completed Plan 02-04 (Salla integration non-destructive: 6 tools — INTG-20/21/23/24/25/26). `get_salla_connection` defensively strips upstream `token` field (canary regression test against "SECRET-TOKEN-DO-NOT-LEAK"); `get_salla_config` surfaces 404 as STRUCTURED `{ config: null }` rather than throwing; `update_salla_config` description pins `service_kind` to `list_service_kinds` (Phase 1 AUTH-08); both writes carry BL-01 guardrails. Tool-surface snapshot 76 → 82 enabled, full `pnpm test` green (462/465 — 3 pre-existing skips), `EVAL_GATE=1 bun run eval:tool-surface` clean. INTG-22 destructive delete deferred to 02-05.
-- **Next session:** `/gsd:execute-plan 02-05` (Phase 2 Wave 5 — Mintsoft/SBL + INTG-22 destructive Salla delete with `confirm:true` gate).
+- **Last session:** 2026-05-19 — completed Plan 02-05 (Phase 2 Wave 5: DESTRUCTIVE deletes + canonical confirm:true gate helper). Shipped: `lib/middleware/destructive.ts` (6 exports — `requireConfirm`, `destructiveConfirmField`, `destructiveDryRunField`, `isDryRun`, `ConfirmationRequiredError`, `buildConfirmationRequiredResult`); `delete_integration_source` (INTG-02, DELETE /{source}/delete/{shopName}); `delete_salla_connection` (INTG-22, DELETE /integrations/connections/{id}). Both tools: TIGHT 3/min rate-limit, audit:true, idempotency_key, `dry_run` short-circuit AFTER confirm, encoded path params. 22 helper unit tests + 11 integration tests with MSW request-count assertion proving NO upstream traffic on the negative paths. Tool-surface snapshot 82 → 84 enabled. Full `pnpm test` green (495/498 — 3 pre-existing skips), `EVAL_GATE=1 bun run eval:tool-surface` clean.
+- **Next session:** `/gsd:execute-plan 02-06` (Phase 2 Wave 6 — Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates).
 
 ---
 *State initialized: 2026-05-19*
-*Last updated: 2026-05-19 (post 02-04 execution — Salla non-destructive family complete)*
+*Last updated: 2026-05-19 (post 02-05 execution — destructive deletes + canonical confirm:true gate landed)*

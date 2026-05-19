@@ -64,7 +64,7 @@ Plans:
 - [x] 02-02-PLAN.md — Shopify family (INTG-07/08/09/10/11/12) — Wave 2
 - [x] 02-03-PLAN.md — WooCommerce family (INTG-13/14/15/16/17/18) — Wave 3
 - [x] 02-04-PLAN.md — Salla family non-destructive (INTG-20/21/23/24/25/26) — Wave 4
-- [ ] 02-05-PLAN.md — DESTRUCTIVE deletes + canonical confirm:true gate helper (INTG-02/22) — Wave 5
+- [x] 02-05-PLAN.md — DESTRUCTIVE deletes + canonical confirm:true gate helper (INTG-02/22) — Wave 5
 - [ ] 02-06-PLAN.md — Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates — Wave 6
 **UI hint**: no
 

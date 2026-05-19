@@ -38,7 +38,7 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 ### Integrations (INTG)
 
 - [ ] **INTG-01**: `list_integration_connections` — `GET /integrations/connections` (Platform)
-- [ ] **INTG-02**: `delete_integration_source` — `DELETE /{source}/delete/{shopName}` (Platform) — DESTRUCTIVE, requires `confirm: true`
+- [x] **INTG-02**: `delete_integration_source` — `DELETE /{source}/delete/{shopName}` (Platform) — DESTRUCTIVE, requires `confirm: true`
 - [ ] **INTG-03**: `list_integration_order_reasons` — `GET /integrations/order-reasons` (Platform)
 - [ ] **INTG-04**: `repair_integration_orders` — `POST /integrations/repair-orders` (Platform)
 - [ ] **INTG-05**: `get_integration_order` — `GET /order/{orderUUID}` (Platform)
@@ -58,7 +58,7 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 - [x] **INTG-19**: `list_quiqup_order_states` — `GET /quiqup/orders/states` (Platform)
 - [x] **INTG-20**: `install_salla` — `GET /integrations/install/salla` (Platform) — returns OAuth URL
 - [x] **INTG-21**: `get_salla_connection` — `GET /integrations/connections/{id}` (Platform)
-- [ ] **INTG-22**: `delete_salla_connection` — `DELETE /integrations/connections/{id}` (Platform) — DESTRUCTIVE
+- [x] **INTG-22**: `delete_salla_connection` — `DELETE /integrations/connections/{id}` (Platform) — DESTRUCTIVE
 - [x] **INTG-23**: `toggle_salla_fulfillment` — `PUT /integrations/connections/{id}/fulfillment` (Platform)
 - [x] **INTG-24**: `get_salla_platform_data` — `GET /integrations/configs/{connectionId}/platform-data` (Platform)
 - [x] **INTG-25**: `get_salla_config` — `GET /integrations/configs/{connectionId}` (Platform)
@@ -304,7 +304,7 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | ADDR-07 | Phase 1 | Pending |
 | ADDR-08 | Phase 1 | Pending |
 | INTG-01 | Phase 2 | Pending |
-| INTG-02 | Phase 2 | Pending |
+| INTG-02 | Phase 2 / Plan 02-05 | Shipped (commit 2596253) |
 | INTG-03 | Phase 2 | Pending |
 | INTG-04 | Phase 2 | Pending |
 | INTG-05 | Phase 2 | Pending |
@@ -324,7 +324,7 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | INTG-19 | Phase 1 | Completed (01-01) |
 | INTG-20 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
 | INTG-21 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
-| INTG-22 | Phase 2 / Plan 02-05 | Pending (destructive — deferred to 02-05 with confirm:true gate) |
+| INTG-22 | Phase 2 / Plan 02-05 | Shipped (commit 2596253) |
 | INTG-23 | Phase 2 / Plan 02-04 | Shipped (commit 7a24f62) |
 | INTG-24 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
 | INTG-25 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
