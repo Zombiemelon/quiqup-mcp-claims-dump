@@ -20,7 +20,19 @@ import { getQuiqupReadyJwt } from "@/lib/quiqup";
 import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
 import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
 
-const coordinate = z.union([z.string(), z.number()]);
+// Reject NaN / Infinity at the schema layer so the handler never ships the
+// literal string "NaN" upstream (the handler unconditionally String()s the
+// value before sending). String form must be a numeric literal so that
+// `Number(value)` is a finite, real number on the upstream side too.
+const coordinate = z.union([
+  z
+    .number()
+    .finite()
+    .refine((n) => !Number.isNaN(n), "coordinate must be a real number"),
+  z
+    .string()
+    .regex(/^-?\d+(\.\d+)?$/, "coordinate string must be a numeric literal"),
+]);
 
 const inputSchema = z.object({
   address1: z.string().min(1, "address1 is required"),
