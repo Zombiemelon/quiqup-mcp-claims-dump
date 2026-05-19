@@ -49,6 +49,13 @@ import { spec as listReturnToOriginReasonsSpec } from "@/lib/tools/list-return-t
 import { spec as listCancellationReasonsSpec } from "@/lib/tools/list-cancellation-reasons";
 import { spec as listCourierFailureReasonsSpec } from "@/lib/tools/list-courier-failure-reasons";
 
+// Phase 1: account + return-settings writes + feature flags (AUTH-07/10/11/12/13).
+import { spec as updateAccountSpec } from "@/lib/tools/update-account";
+import { spec as decideFeatureFlagsBulkSpec } from "@/lib/tools/decide-feature-flags-bulk";
+import { spec as getReturnSettingsSpec } from "@/lib/tools/get-return-settings";
+import { spec as updateReturnSettingsSpec } from "@/lib/tools/update-return-settings";
+import { spec as createAccountTeamMemberSpec } from "@/lib/tools/create-account-team-member";
+
 // M3 thin pass-through enabled writes.
 // TODO(M4): cassette + output schemas + error mapping for these.
 // TODO(M6): retroactive scope/audit/idempotency guardrails.
@@ -127,6 +134,13 @@ const handler = createMcpHandler(
     registerTool(server, listReturnToOriginReasonsSpec);
     registerTool(server, listCancellationReasonsSpec);
     registerTool(server, listCourierFailureReasonsSpec);
+
+    // -- Phase 1: account + return-settings writes + feature flags --
+    registerTool(server, updateAccountSpec);
+    registerTool(server, decideFeatureFlagsBulkSpec);
+    registerTool(server, getReturnSettingsSpec);
+    registerTool(server, updateReturnSettingsSpec);
+    registerTool(server, createAccountTeamMemberSpec);
 
     // -- M3 enabled writes: thin pass-through (TODO(M4)/M6 hardening) --
     registerTool(server, createLastmileOrderSpec);
