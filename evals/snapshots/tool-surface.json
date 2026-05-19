@@ -31,6 +31,7 @@
     "get_quiqdash_init": "enabled",
     "get_return_settings": "enabled",
     "get_shopify_config": "enabled",
+    "get_woocommerce_config": "enabled",
     "list_account_addresses": "enabled",
     "list_cancellation_reasons": "enabled",
     "list_countries": "enabled",
@@ -51,6 +52,9 @@
     "list_shopify_locations": "enabled",
     "list_sku_batches": "enabled",
     "list_state_cities": "enabled",
+    "list_woocommerce_connections": "enabled",
+    "list_woocommerce_shipping_lines": "enabled",
+    "list_woocommerce_states": "enabled",
     "lookup_google_place": "enabled",
     "mark_ready_for_collection": "enabled",
     "recent_orders": "enabled",
@@ -60,6 +64,7 @@
     "set_delivery_failed_batch": "enabled",
     "set_out_for_delivery_batch": "enabled",
     "setup_shopify_callback": "enabled",
+    "setup_woocommerce_connection": "enabled",
     "update_account": "enabled",
     "update_fulfilment_order": "enabled",
     "update_lastmile_order": "enabled",
@@ -69,6 +74,7 @@
     "update_return_settings": "enabled",
     "update_shopify_config": "enabled",
     "update_shopify_connection": "enabled",
+    "upsert_woocommerce_config": "enabled",
     "whoami_platform": "enabled"
   }
 }

@@ -71,6 +71,14 @@ import { spec as updateShopifyConfigSpec } from "@/lib/tools/update-shopify-conf
 import { spec as updateShopifyConnectionSpec } from "@/lib/tools/update-shopify-connection";
 import { spec as setupShopifyCallbackSpec } from "@/lib/tools/setup-shopify-callback";
 
+// Phase 2: WooCommerce integration (INTG-13/14/15/16/17/18).
+import { spec as listWoocommerceConnectionsSpec } from "@/lib/tools/list-woocommerce-connections";
+import { spec as getWoocommerceConfigSpec } from "@/lib/tools/get-woocommerce-config";
+import { spec as listWoocommerceStatesSpec } from "@/lib/tools/list-woocommerce-states";
+import { spec as listWoocommerceShippingLinesSpec } from "@/lib/tools/list-woocommerce-shipping-lines";
+import { spec as setupWoocommerceConnectionSpec } from "@/lib/tools/setup-woocommerce-connection";
+import { spec as upsertWoocommerceConfigSpec } from "@/lib/tools/upsert-woocommerce-config";
+
 // M3 thin pass-through enabled writes.
 // TODO(M4): cassette + output schemas + error mapping for these.
 // TODO(M6): retroactive scope/audit/idempotency guardrails.
@@ -171,6 +179,14 @@ const handler = createMcpHandler(
     registerTool(server, updateShopifyConfigSpec);
     registerTool(server, updateShopifyConnectionSpec);
     registerTool(server, setupShopifyCallbackSpec);
+
+    // -- Phase 2: WooCommerce integration (INTG-13/14/15/16/17/18) --
+    registerTool(server, listWoocommerceConnectionsSpec);
+    registerTool(server, getWoocommerceConfigSpec);
+    registerTool(server, listWoocommerceStatesSpec);
+    registerTool(server, listWoocommerceShippingLinesSpec);
+    registerTool(server, setupWoocommerceConnectionSpec);
+    registerTool(server, upsertWoocommerceConfigSpec);
 
     // -- M3 enabled writes: thin pass-through (TODO(M4)/M6 hardening) --
     registerTool(server, createLastmileOrderSpec);
