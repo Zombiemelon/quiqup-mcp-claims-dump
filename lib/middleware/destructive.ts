@@ -128,6 +128,25 @@ export function isDryRun(args: { dry_run?: boolean | undefined }): boolean {
 }
 
 /**
+ * Sanitize a caller-supplied string for safe interpolation into the
+ * confirmation-required error text (02-REVIEW WR-09).
+ *
+ * Two risks the bare-interpolation form had:
+ *   1. Log injection — `id = "abc\nadmin_session: ..."` would land newline-
+ *      separated tokens in the audit log line.
+ *   2. PII / unintended disclosure — an LLM that copy-pastes a whole
+ *      `list_integration_connections` row into the id arg gets the row
+ *      echoed back in the error text.
+ *
+ * Cap length and strip control characters; the cap is generous (256) so
+ * legitimate ids and shop_names are never truncated.
+ */
+export function sanitizeForResourceText(s: string): string {
+  // eslint-disable-next-line no-control-regex
+  return s.slice(0, 256).replace(/[\r\n\t\x00-\x1f]+/g, " ");
+}
+
+/**
  * Convert a `ConfirmationRequiredError` into the structured MCP tool-result
  * shape callers return directly. The result is `isError: true` and the text
  * names the tool, the resource, and the literal `confirm: true` recovery

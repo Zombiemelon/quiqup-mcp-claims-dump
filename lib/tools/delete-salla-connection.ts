@@ -46,6 +46,7 @@ import {
   destructiveDryRunField,
   isDryRun,
   requireConfirm,
+  sanitizeForResourceText,
 } from "@/lib/middleware/destructive";
 
 const inputSchema = z.object({
@@ -118,10 +119,13 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
 
     // 2. Destructive confirm gate (canonical Phase 2+ pattern).
     try {
+      // 02-REVIEW WR-09: sanitize args before interpolating into LLM-visible
+      // error text — strips newlines/control chars and caps length so a
+      // log-injection or copy-the-whole-row id doesn't echo back verbatim.
       requireConfirm(
         "delete_salla_connection",
         args,
-        `Salla connection id ${args.id}`,
+        `Salla connection id ${JSON.stringify(sanitizeForResourceText(args.id))}`,
       );
     } catch (err) {
       if (err instanceof ConfirmationRequiredError) {

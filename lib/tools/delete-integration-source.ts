@@ -46,6 +46,7 @@ import {
   destructiveDryRunField,
   isDryRun,
   requireConfirm,
+  sanitizeForResourceText,
 } from "@/lib/middleware/destructive";
 
 const inputSchema = z.object({
@@ -129,10 +130,13 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     //    and converted to a structured isError result so registerTool's
     //    error-mapping does not need to know about destructive semantics.
     try {
+      // 02-REVIEW WR-09: sanitize args.shop_name before interpolating into
+      // LLM-visible error text. `args.source` is already enum-bound so it's
+      // safe verbatim.
       requireConfirm(
         "delete_integration_source",
         args,
-        `${args.source} connection for shop "${args.shop_name}"`,
+        `${args.source} connection for shop ${JSON.stringify(sanitizeForResourceText(args.shop_name))}`,
       );
     } catch (err) {
       if (err instanceof ConfirmationRequiredError) {

@@ -375,6 +375,30 @@ describe("delete_salla_connection", () => {
     expect(deleteCount).toBe(0);
   });
 
+  // 02-REVIEW WR-09: newline / control-char injection in args.id is stripped
+  // before the id is interpolated into the confirmation-required error text.
+  // Prevents log-injection style attacks where a multi-line id smuggles
+  // pseudo-fields into log aggregators.
+  it("sanitizes args.id newline/control-char injection in error text (WR-09)", async () => {
+    const mod = await import("../../lib/tools/delete-salla-connection");
+    const malicious = "abc\nadmin_session: smuggled\r\tlog_level: critical";
+    const result = await mod.spec.handler(auth, {
+      id: malicious,
+      // No confirm → confirmation-required error path.
+      environment: "production",
+    });
+    expect((result as { isError?: boolean }).isError).toBe(true);
+    const first = result.content[0];
+    if (first.type !== "text") throw new Error("expected text block");
+    // Raw newlines / tabs / CR must NOT survive into the error text.
+    expect(first.text).not.toContain("\n");
+    expect(first.text).not.toContain("\r");
+    expect(first.text).not.toContain("\t");
+    // The smuggled-field substrings (newlines stripped) might still appear
+    // as ordinary characters — but the structural separators that matter
+    // for log parsers are gone.
+  });
+
   // 02-REVIEW BL-03: refuse to delete a non-Salla connection even with
   // confirm:true. The upstream DELETE endpoint is family-agnostic, so the
   // tool's "Salla" scope is enforced here by the pre-flight GET.
