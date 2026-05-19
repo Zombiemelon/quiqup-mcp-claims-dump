@@ -5,25 +5,26 @@
 ## Project Reference
 
 - **Core value:** Every backend endpoint that powers Quiqdash v3 must be reachable from an LLM via a single MCP server, with the same auth, the same error semantics, and the same observability as the existing staging-verified tools.
-- **Current focus:** Phase 2 — Integrations (Shopify/Salla/WooCommerce + shared surface)
+- **Current focus:** Phase 3 — Orders read path (Orders Core GraphQL + Audit + Ex-core CSV + Quiqup REST history)
 
 ## Current Position
 
-- **current_phase:** 3 (next)
-- **current_plan:** 03-01 (next)
-- **status:** Phase 2 complete (6/6 waves shipped; 5/5 family eval coverage at the CI layer)
-- **progress:** Phase 2: 6/6 plans complete — full Phase-2 family eval coverage landed
+- **current_phase:** 3 (in progress — Wave 1 shipped)
+- **current_plan:** 03-02 (next)
+- **status:** Phase 3 Wave 1 complete (1/5 plans shipped — Orders Core GraphQL client landed)
+- **progress:** Phase 3: 1/5 plans complete — Orders Core GraphQL client + ORDL-02/03 tools live
 
 ```
-[████                ] 20% (Phase 1 complete + Phase 2 complete)
+[█████               ] 22% (Phase 1 complete + Phase 2 complete + Phase 3 Wave 1)
 ```
 
 ## Performance Metrics
 
 - Phases completed: 2 (Phase 1 + Phase 2)
-- Plans completed: 10 (01-01..01-04, 02-01, 02-02, 02-03, 02-04, 02-05, 02-06)
-- Requirements shipped (v1): see REQUIREMENTS.md (02-06 closes Phase 2 — full Langfuse eval coverage for all 5 sub-families)
-- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2: shared-integrations, shopify-integration, woocommerce-integration, salla-integration, destructive-integrations)
+- Plans completed: 11 (01-01..01-04, 02-01..02-06, 03-01)
+- Requirements shipped (v1): see REQUIREMENTS.md (03-01 adds ORDL-02, ORDL-03 to the shipped set)
+- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2). Phase-3 family eval (Orders Core GraphQL) deferred to plan 03-05 per the canonical Phase-N final-wave eval pattern.
+- New service hosts introduced this wave: 1 (`orders-api.quiqup.com/graph` — Orders Core GraphQL, distinct from Last-Mile REST and Platform / Fulfilment)
 
 ### Plan Execution Log
 
@@ -39,6 +40,7 @@
 | 02    | 04   | ~20m    | 3     | 9     | 2026-05-19 |
 | 02    | 05   | ~15m    | 3     | 6     | 2026-05-19 |
 | 02    | 06   | ~25m    | 3     | 17    | 2026-05-19 |
+| 03    | 01   | ~10m    | 3     | 6     | 2026-05-19 |
 
 ## Accumulated Context
 
@@ -70,6 +72,11 @@
 - 2026-05-19 (02-06): Five Langfuse evals shipped — one per Phase-2 sub-family (shared / shopify / woocommerce / salla / destructive). PROJECT.md "Every new service-host family gets at least one Langfuse eval before its tools count as shipped" invariant is satisfied at the sub-family granularity for all of Phase 2.
 - 2026-05-19 (02-06): Three new STATIC source-inspection scorer patterns established for Phase 2 onwards (token-omission, four-oh-four-as-null, confirm-gate-present). These are the canonical "lock production invariants at the CI layer" approach — readFile() the source and assert substrings, OR import a helper and assert Zod-instance identity. Future phases with similar must-haves SHOULD reuse this pattern. Mirrors plan 01-04 Task 2 Step B (auth-isolation on lookup-google-place).
 - 2026-05-19 (02-06): EVAL_GATE thresholds calibrated per-family — args-overlap 0.7 for shared (8-arg repair tool) and destructive (no-literal-confirm prompt elicitation noise); 0.75 for shopify/woocommerce/salla. All STATIC item-independent scorers (description-quality, sensitive-and-single-use-language, quiqup-vs-woocommerce-state-disambiguation, token-omission, four-oh-four-as-null, confirm-gate-present) pinned at 1.0.
+- 2026-05-19 (03-01): Orders Core GraphQL is a NEW service host (`orders-api.quiqup.com/graph` prod, `orders-api.staging.quiqup.com/graph` staging). Canonical client lives at `lib/clients/orders-core-graphql.ts` with `QUIQUP_ORDERS_GRAPH_URL` / `QUIQUP_ORDERS_GRAPH_STAGING_URL` env overrides; every future GraphQL-host tool in this project MUST import from this module rather than re-implementing wire concerns.
+- 2026-05-19 (03-01): GraphQL `errors[]` in HTTP 200 responses are returned to the caller verbatim — NOT auto-thrown. Partial-success is a documented GraphQL pattern (spec §7.1) and Relay (used by Quiqdash) treats partial-data + errors as a valid response; auto-throwing would discard data the agent may still want. Tools surface both `data` and `errors` in their text output so the LLM can decide whether the response is actionable. Locked in by the client-level "returns { data, errors } as-is" test and tool-level "surfaces GraphQL errors[]" tests on both ORDL-02 and ORDL-03.
+- 2026-05-19 (03-01): The Orders Core GraphQL client deliberately reuses `QuiqupHttpError` and the Clerk → Quiqup session-JWT bearer model — NOT the `google-places.ts` API-key auth exception. Orders Core is a first-party Quiqup service; the auth-exception pattern is reserved for the truly-third-party Google host. Locked in by a `grep -c "X-Goog-Api-Key\|api_key\|apiKey" lib/clients/orders-core-graphql.ts` == 0 acceptance check.
+- 2026-05-19 (03-01): `lookup_orders_ids.orderBy.field` is `z.literal("SUBMITTED_AT")` — the Quiqdash frontend hard-codes this; free-string would let an LLM probe undocumented sort fields (threat T-03-04). If Quiqdash extends the enum in future this widens with explicit review.
+- 2026-05-19 (03-01): `bulk_orders_lookup.client_order_ids` cap of 200 matches the upstream `bulkOrdersLookupQuery`'s `first: 200` hard-code. Mirroring the cap at the schema layer rejects over-large requests client-side instead of letting them be silently truncated upstream.
 
 ### Todos
 
@@ -81,9 +88,9 @@
 
 ## Session Continuity
 
-- **Last session:** 2026-05-19 — completed Plan 02-06 (Phase 2 Wave 6: Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates). Shipped: 5 new family evals (`evals/integrations-shared.ts`, `evals/shopify-integration.ts`, `evals/woocommerce-integration.ts`, `evals/salla-integration.ts`, `evals/destructive-integrations.ts`) with their datasets + score files; 5 new `package.json` eval:* scripts; 5 new `.github/workflows/eval-gate.yml` jobs with `EVAL_GATE: "1"`. THREE new STATIC source-inspection scorer patterns established (token-omission on get-salla-connection.ts T-02-29, four-oh-four-as-null on get-salla-config.ts T-02-30, confirm-gate-present that imports destructiveConfirmField + destructiveDryRunField and asserts Zod-instance identity on both delete tools' inputSchema.shape T-02-52). All 5 evals run as dry-runs, pnpm tsc clean, 495 tests still pass. **Phase 2 is complete.**
-- **Next session:** `/gsd:plan-phase 3` (Phase 3 — Last-mile substrate; or whichever next phase the roadmap directs).
+- **Last session:** 2026-05-19 — completed Plan 03-01 (Phase 3 Wave 1: Orders Core GraphQL client + ORDL-02/03 read tools). Shipped: new `lib/clients/orders-core-graphql.ts` (POST {baseUrl} JSON envelope, Bearer-JWT auth, QuiqupHttpError on HTTP non-2xx, `errors[]` passthrough on 200 partial-success); two new tool specs (`lib/tools/lookup-orders-ids.ts` for the `ordersListingIdsQuery` "ids only" companion query, `lib/tools/bulk-orders-lookup.ts` for the `bulkOrdersLookupQuery` items+weights re-fetch). MSW client tests (6) cover POST envelope shape, partial-success passthrough, HTTP-error mapping, both env-var overrides, and the staging cluster route. Tool tests (13) cover happy path, variables-envelope forwarding, errors[] surfacing, schema-rejection edge cases (page-size cap 500, ids-array cap 200, orderBy literal lock), missing-auth.userId, and HTTP 401 → QuiqupHttpError. `app/[transport]/route.ts` registers both specs under a Phase-3 comment block; `evals/snapshots/tool-surface.json` records both as `enabled` (86 total tools). Full suite: 527 passed, 3 skipped, 0 regressions. EVAL_GATE=1 bun run eval:tool-surface exits 0.
+- **Next session:** `/gsd:execute-phase 3` continues with Plan 03-02 (Quiqup REST history client + Audit client + get_order_history + list_order_audit_events — ORDS-02/05).
 
 ---
 *State initialized: 2026-05-19*
-*Last updated: 2026-05-19 (post 02-06 execution — Phase 2 complete; 5/5 family eval coverage at the CI layer)*
+*Last updated: 2026-05-19 (post 03-01 execution — Phase 3 Wave 1 complete; Orders Core GraphQL client + ORDL-02/03 tools live)*

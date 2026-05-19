@@ -80,7 +80,7 @@ Plans:
   5. An agent can upload a document to an order via `upload_order_document` (multipart against Orders Core REST) and receive the resulting document reference.
 **Plans:** 5 plans
 Plans:
-- [ ] 03-01-PLAN.md — Orders Core GraphQL client + lookup_orders_ids + bulk_orders_lookup (ORDL-02/03) — Wave 1
+- [x] 03-01-PLAN.md — Orders Core GraphQL client + lookup_orders_ids + bulk_orders_lookup (ORDL-02/03) — Wave 1 — completed 2026-05-19
 - [ ] 03-02-PLAN.md — Quiqup REST history client + Audit client (auth-exception, AUDIT_BASE_URL wiring) + get_order_history + list_order_audit_events (ORDS-02/05) — Wave 2
 - [ ] 03-03-PLAN.md — Platform reads: find_order_by_id_or_barcode + list_depots + list_missions_filter (ORDL-04/05/06) — Wave 3
 - [ ] 03-04-PLAN.md — Ex-core CSV export client + Orders Core REST multipart client + download_orders_export + upload_order_document (ORDL-07/ORDS-08) — Wave 4

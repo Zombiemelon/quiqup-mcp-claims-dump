@@ -67,8 +67,8 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 ### Orders — Listing & Filters (ORDL)
 
 - [x] **ORDL-01**: `recent_orders` — orders listing (existing; covers `ordersListingQuery` GraphQL)
-- [ ] **ORDL-02**: `lookup_orders_ids` — `ordersListingIdsQuery` GraphQL (Orders Core GraphQL)
-- [ ] **ORDL-03**: `bulk_orders_lookup` — `bulkOrdersLookupQuery` GraphQL (Orders Core GraphQL)
+- [x] **ORDL-02**: `lookup_orders_ids` — `ordersListingIdsQuery` GraphQL (Orders Core GraphQL)
+- [x] **ORDL-03**: `bulk_orders_lookup` — `bulkOrdersLookupQuery` GraphQL (Orders Core GraphQL)
 - [ ] **ORDL-04**: `find_order_by_id_or_barcode` — `GET /quiqdash/orders/find_by_id_or_barcode` (Platform)
 - [ ] **ORDL-05**: `list_depots` — `GET /quiqdash/depots` (Platform)
 - [ ] **ORDL-06**: `list_missions_filter` — `GET /quiqdash/missions` (Platform) — autocomplete form
@@ -330,8 +330,8 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | INTG-25 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
 | INTG-26 | Phase 2 / Plan 02-04 | Shipped (commit 7a24f62) |
 | ORDL-01 | (shipped) | Validated |
-| ORDL-02 | Phase 3 | Pending |
-| ORDL-03 | Phase 3 | Pending |
+| ORDL-02 | Phase 3 / Plan 03-01 | Shipped (commit 3d80c4b) |
+| ORDL-03 | Phase 3 / Plan 03-01 | Shipped (commit 3d80c4b) |
 | ORDL-04 | Phase 3 | Pending |
 | ORDL-05 | Phase 3 | Pending |
 | ORDL-06 | Phase 3 | Pending |
