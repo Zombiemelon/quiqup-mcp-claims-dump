@@ -43,9 +43,9 @@ Phase 1 establishes the auth/lookup substrate that everything else depends on. P
 **Plans:** 4 plans
 Plans:
 - [x] 01-01-PLAN.md — Auth & Account reads (AUTH-03/04/05/06/08/09 + INTG-19) — Wave 1 — completed 2026-05-19
-- [ ] 01-02-PLAN.md — Addresses, geo lookups, Google Places + reason codes (ADDR-01..08 + ORDL-08..12) — Wave 2
-- [ ] 01-03-PLAN.md — Auth & Account writes + feature flags (AUTH-07/10/11/12/13) — Wave 3
-- [ ] 01-04-PLAN.md — Langfuse eval coverage (Platform reads + Google Places families) — Wave 4
+- [x] 01-02-PLAN.md — Addresses, geo lookups, Google Places + reason codes (ADDR-01..08 + ORDL-08..12) — Wave 2 — completed 2026-05-19
+- [x] 01-03-PLAN.md — Auth & Account writes + feature flags (AUTH-07/10/11/12/13) — Wave 3 — completed 2026-05-19
+- [x] 01-04-PLAN.md — Langfuse eval coverage (Platform reads + Google Places families) — Wave 4 — completed 2026-05-19
 **UI hint**: no
 
 ### Phase 2: Integrations (Shopify / WooCommerce / Salla)
@@ -184,7 +184,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Account, Auth & Reference Data | 0/4 | Not started | - |
+| 1. Account, Auth & Reference Data | 4/4 | Plans complete (awaiting gsd-verifier) | 2026-05-19 |
 | 2. Integrations (Shopify / WooCommerce / Salla) | 0/0 | Not started | - |
 | 3. Orders — Read Path | 0/0 | Not started | - |
 | 4. Orders — Write Path & Lifecycle | 0/0 | Not started | - |
