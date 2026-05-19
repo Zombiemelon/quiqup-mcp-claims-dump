@@ -53,11 +53,23 @@ const inputSchema = z.object({
   region_code: z.string().optional(),
   service_offering: z.string().optional(),
   settings: z.record(z.string(), z.unknown()).optional(),
-  bank_name: z.string().optional(),
-  bank_account_number: z.string().optional(),
-  bank_iban: z.string().optional(),
-  bank_swift: z.string().optional(),
-  bank_account_holder: z.string().optional(),
+  bank_name: z.string().min(1).max(140).optional(),
+  bank_account_number: z.string().min(4).max(34).optional(),
+  bank_iban: z
+    .string()
+    .regex(
+      /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/i,
+      "IBAN must start with two letters followed by two digits (ISO 13616)",
+    )
+    .optional(),
+  bank_swift: z
+    .string()
+    .regex(
+      /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/i,
+      "SWIFT/BIC must be 8 or 11 characters (ISO 9362)",
+    )
+    .optional(),
+  bank_account_holder: z.string().min(1).max(140).optional(),
   idempotency_key: z
     .string()
     .optional()
