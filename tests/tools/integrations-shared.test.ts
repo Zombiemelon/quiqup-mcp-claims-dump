@@ -245,6 +245,42 @@ describe("list_integration_order_reasons", () => {
     ).rejects.toThrow(/authenticated user/);
   });
 
+  // 02-REVIEW WR-02: empty / non-ISO-8601 date strings used to silently slip
+  // through to the upstream query parser (which interpreted them as epoch /
+  // now / 422 depending on the cluster). The new `.datetime()` shape rejects.
+  it("schema rejects empty / non-ISO-8601 start_date and end_date (WR-02)", async () => {
+    const mod = await import("../../lib/tools/list-integration-order-reasons");
+    const base = {
+      sales_channel: "shopify",
+      status: "failed",
+      limit: 50,
+      offset: 0,
+    };
+    for (const bad of ["", "today", "2026-05-01", "2026/05/01 00:00:00"]) {
+      expect(
+        mod.spec.inputSchema.safeParse({
+          ...base,
+          start_date: bad,
+          end_date: "2026-05-19T00:00:00Z",
+        }).success,
+      ).toBe(false);
+      expect(
+        mod.spec.inputSchema.safeParse({
+          ...base,
+          start_date: "2026-05-01T00:00:00Z",
+          end_date: bad,
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      mod.spec.inputSchema.safeParse({
+        ...base,
+        start_date: "2026-05-01T00:00:00Z",
+        end_date: "2026-05-19T00:00:00Z",
+      }).success,
+    ).toBe(true);
+  });
+
   it("schema rejects limit:500 (max 200) and limit:0 (min 1)", async () => {
     const mod = await import("../../lib/tools/list-integration-order-reasons");
     // 02-REVIEW BL-04: user_id is not in the input schema anymore — it's
@@ -380,6 +416,39 @@ describe("repair_integration_orders", () => {
         end_date: "2026-05-19T00:00:00Z",
       }).success,
     ).toBe(false);
+  });
+
+  // 02-REVIEW WR-02: same empty/non-ISO-8601 rejection on repair.
+  it("schema rejects empty / non-ISO-8601 start_date and end_date on repair (WR-02)", async () => {
+    const mod = await import("../../lib/tools/repair-integration-orders");
+    const base = {
+      ids: ["i1"],
+      order_name: "#1234",
+      shop_name: "acme",
+      site_url: "https://acme.myshopify.com",
+      source: "shopify",
+    };
+    expect(
+      mod.spec.inputSchema.safeParse({
+        ...base,
+        start_date: "",
+        end_date: "2026-05-19T00:00:00Z",
+      }).success,
+    ).toBe(false);
+    expect(
+      mod.spec.inputSchema.safeParse({
+        ...base,
+        start_date: "2026-05-01T00:00:00Z",
+        end_date: "not-a-date",
+      }).success,
+    ).toBe(false);
+    expect(
+      mod.spec.inputSchema.safeParse({
+        ...base,
+        start_date: "2026-05-01T00:00:00Z",
+        end_date: "2026-05-19T00:00:00Z",
+      }).success,
+    ).toBe(true);
   });
 
   // 02-REVIEW BL-04: caller-supplied user_id in args is IGNORED — the handler

@@ -64,13 +64,22 @@ const inputSchema = z.object({
     .describe(
       "Order-reason status filter; common values: 'pending', 'failed', 'resolved'.",
     ),
+  // 02-REVIEW WR-02: enforce ISO-8601 date-time format (was plain string —
+  // empty strings and arbitrary text used to slip through to the upstream
+  // query parser).
   start_date: z
     .string()
+    .datetime({
+      message: "must be ISO-8601 date-time, e.g. 2026-05-01T00:00:00Z",
+    })
     .describe(
       "ISO-8601 date-time inclusive lower bound, e.g. 2026-05-01T00:00:00Z.",
     ),
   end_date: z
     .string()
+    .datetime({
+      message: "must be ISO-8601 date-time, e.g. 2026-05-19T00:00:00Z",
+    })
     .describe("ISO-8601 date-time exclusive upper bound."),
   // NOTE: `user_id` is intentionally NOT a caller arg (02-REVIEW BL-04). The
   // handler binds it to `auth.userId` server-side from the JWT subject so

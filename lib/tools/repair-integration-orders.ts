@@ -65,13 +65,22 @@ const inputSchema = z.object({
   // LLM cannot supply a foreign user_id and have repair-orders mutate another
   // tenant's records. The upstream body still receives `user_id`; the LLM
   // doesn't get to choose its value.
+  // 02-REVIEW WR-02: enforce ISO-8601 date-time format on both bounds.
   start_date: z
     .string()
+    .datetime({
+      message: "must be ISO-8601 date-time, e.g. 2026-05-01T00:00:00Z",
+    })
     .describe(
       "ISO-8601 date-time inclusive lower bound — typically the same window " +
         "passed to `list_integration_order_reasons`.",
     ),
-  end_date: z.string().describe("ISO-8601 date-time exclusive upper bound."),
+  end_date: z
+    .string()
+    .datetime({
+      message: "must be ISO-8601 date-time, e.g. 2026-05-19T00:00:00Z",
+    })
+    .describe("ISO-8601 date-time exclusive upper bound."),
   idempotency_key: z
     .string()
     .optional()
