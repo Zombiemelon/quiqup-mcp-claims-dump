@@ -40,6 +40,14 @@ const inputSchema = z.object({
       'Role for the new member, e.g. "admin", "operator", "viewer". The ' +
         "upstream enforces the allowed enum.",
     ),
+  idempotency_key: z
+    .string()
+    .optional()
+    .describe(
+      "Optional caller-supplied key to dedupe retries within a 15-minute " +
+        "window. Strongly recommended — a retry-after-network-blip without " +
+        "this key may provision a duplicate invite or return 409.",
+    ),
   environment: environmentField,
 });
 
@@ -61,6 +69,14 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     'Example: `{ "email": "ops@partner.example", "role": "operator" }`.',
   inputSchema,
   outputSchema,
+  // Privilege-escalation action — tight burst limit (5 / minute), idempotency
+  // key on retries so a network blip does not provision a duplicate invite,
+  // and audit on every call so the action is traceable.
+  guardrails: {
+    rateLimit: { capacity: 5, refillPerSec: 5 / 60 },
+    idempotency: { keyArg: "idempotency_key", ttlMs: 15 * 60 * 1000 },
+    audit: true,
+  },
   handler: async (auth, args) => {
     if (!auth.userId) {
       throw new Error("create_account_team_member requires an authenticated user");

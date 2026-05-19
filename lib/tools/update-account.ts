@@ -58,6 +58,13 @@ const inputSchema = z.object({
   bank_iban: z.string().optional(),
   bank_swift: z.string().optional(),
   bank_account_holder: z.string().optional(),
+  idempotency_key: z
+    .string()
+    .optional()
+    .describe(
+      "Optional caller-supplied key to dedupe retries within a 15-minute " +
+        "window. Recommended when updating bank fields.",
+    ),
   environment: environmentField,
 });
 
@@ -85,6 +92,11 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     'Example: `{ "display_name": "Acme Partner", "contact_phone": "+971501234567" }`.',
   inputSchema,
   outputSchema,
+  guardrails: {
+    rateLimit: { capacity: 10, refillPerSec: 10 / 60 },
+    idempotency: { keyArg: "idempotency_key", ttlMs: 15 * 60 * 1000 },
+    audit: true,
+  },
   handler: async (auth, args) => {
     if (!auth.userId) {
       throw new Error("update_account requires an authenticated user");

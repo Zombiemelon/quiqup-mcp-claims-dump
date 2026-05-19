@@ -35,6 +35,12 @@ const inputSchema = z.object({
   contact_name: z.string().optional(),
   contact_phone: z.string().optional(),
   label: z.string().optional(),
+  idempotency_key: z
+    .string()
+    .optional()
+    .describe(
+      "Optional caller-supplied key to dedupe retries within a 15-minute window.",
+    ),
   environment: environmentField,
 });
 
@@ -55,6 +61,11 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     'Example: `{ "id": "addr_123", "label": "Renamed Warehouse" }`.',
   inputSchema,
   outputSchema,
+  guardrails: {
+    rateLimit: { capacity: 10, refillPerSec: 10 / 60 },
+    idempotency: { keyArg: "idempotency_key", ttlMs: 15 * 60 * 1000 },
+    audit: true,
+  },
   handler: async (auth, args) => {
     if (!auth.userId) {
       throw new Error("update_partner_address requires an authenticated user");

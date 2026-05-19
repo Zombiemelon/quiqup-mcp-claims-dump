@@ -38,6 +38,12 @@ const inputSchema = z.object({
     .string()
     .optional()
     .describe('Human-readable label e.g. "Main Warehouse"'),
+  idempotency_key: z
+    .string()
+    .optional()
+    .describe(
+      "Optional caller-supplied key to dedupe retries within a 15-minute window.",
+    ),
   environment: environmentField,
 });
 
@@ -62,6 +68,11 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     '"label": "Main Warehouse" }`.',
   inputSchema,
   outputSchema,
+  guardrails: {
+    rateLimit: { capacity: 10, refillPerSec: 10 / 60 },
+    idempotency: { keyArg: "idempotency_key", ttlMs: 15 * 60 * 1000 },
+    audit: true,
+  },
   handler: async (auth, args) => {
     if (!auth.userId) {
       throw new Error("create_partner_address requires an authenticated user");

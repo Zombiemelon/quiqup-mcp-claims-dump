@@ -60,6 +60,12 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     'Example: `{ "features": ["new_dashboard", "experimental_export"] }`.',
   inputSchema,
   outputSchema,
+  // Read-shaped POST: no idempotency or rate-limit needed, but audit IS
+  // emitted because the response reveals the partner's feature surface
+  // (useful trail if a session ever asks "what flags did we evaluate?").
+  guardrails: {
+    audit: true,
+  },
   handler: async (auth, args) => {
     if (!auth.userId) {
       throw new Error("decide_feature_flags_bulk requires an authenticated user");

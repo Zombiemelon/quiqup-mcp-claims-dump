@@ -52,6 +52,13 @@ const inputSchema = z.object({
     .record(z.string(), z.unknown())
     .optional()
     .describe("Open settings blob — additional return-policy knobs."),
+  idempotency_key: z
+    .string()
+    .optional()
+    .describe(
+      "Optional caller-supplied key to dedupe retries within a 15-minute " +
+        "window.",
+    ),
   environment: environmentField,
 });
 
@@ -72,6 +79,11 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     'Example: `{ "account_id": "me", "return_window_days": 14, "allowed_reasons": ["damaged", "wrong_item"] }`.',
   inputSchema,
   outputSchema,
+  guardrails: {
+    rateLimit: { capacity: 10, refillPerSec: 10 / 60 },
+    idempotency: { keyArg: "idempotency_key", ttlMs: 15 * 60 * 1000 },
+    audit: true,
+  },
   handler: async (auth, args) => {
     if (!auth.userId) {
       throw new Error("update_return_settings requires an authenticated user");
