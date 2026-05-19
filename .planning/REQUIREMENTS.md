@@ -12,13 +12,13 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 
 - [x] **AUTH-01**: `whoami_platform` — `GET /me` (Platform) — diagnostic for actor-token (existing)
 - [x] **AUTH-02**: `register` — `POST /partner/register` (Platform) (existing)
-- [ ] **AUTH-03**: `get_account` — `GET /account` (Platform)
-- [ ] **AUTH-04**: `get_permissions` — `GET /permissions` (Platform)
-- [ ] **AUTH-05**: `get_account_capabilities` — `GET /accounts/{id}/capabilities` (Platform)
-- [ ] **AUTH-06**: `get_account_by_id` — `GET /accounts/{id}` (Platform)
+- [x] **AUTH-03**: `get_account` — `GET /account` (Platform)
+- [x] **AUTH-04**: `get_permissions` — `GET /permissions` (Platform)
+- [x] **AUTH-05**: `get_account_capabilities` — `GET /accounts/{id}/capabilities` (Platform)
+- [x] **AUTH-06**: `get_account_by_id` — `GET /accounts/{id}` (Platform)
 - [ ] **AUTH-07**: `update_account` — `PUT /accounts` (Platform) — also used by finance bank details
-- [ ] **AUTH-08**: `list_service_kinds` — `GET /quiqup/service-kinds` (Platform)
-- [ ] **AUTH-09**: `get_quiqdash_init` — `GET /quiqdash/init` (Platform) — bootstrap payload
+- [x] **AUTH-08**: `list_service_kinds` — `GET /quiqup/service-kinds` (Platform)
+- [x] **AUTH-09**: `get_quiqdash_init` — `GET /quiqdash/init` (Platform) — bootstrap payload
 - [ ] **AUTH-10**: `decide_feature_flags_bulk` — `POST /featureflags/decide-bulk` (Platform)
 - [ ] **AUTH-11**: `get_return_settings` — `GET /api/accounts/{accountID}/return-settings` (Platform)
 - [ ] **AUTH-12**: `update_return_settings` — `PUT /api/accounts/{accountID}/return-settings` (Platform)
@@ -55,7 +55,7 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 - [ ] **INTG-16**: `list_woocommerce_shipping_lines` — `GET /woocommerce/shipping-lines` (Platform)
 - [ ] **INTG-17**: `setup_woocommerce_connection` — `POST /woocommerce/connection` (Platform)
 - [ ] **INTG-18**: `upsert_woocommerce_config` — `PUT /woocommerce/settings/config/upsert` (Platform)
-- [ ] **INTG-19**: `list_quiqup_order_states` — `GET /quiqup/orders/states` (Platform)
+- [x] **INTG-19**: `list_quiqup_order_states` — `GET /quiqup/orders/states` (Platform)
 - [ ] **INTG-20**: `install_salla` — `GET /integrations/install/salla` (Platform) — returns OAuth URL
 - [ ] **INTG-21**: `get_salla_connection` — `GET /integrations/connections/{id}` (Platform)
 - [ ] **INTG-22**: `delete_salla_connection` — `DELETE /integrations/connections/{id}` (Platform) — DESTRUCTIVE
@@ -284,13 +284,13 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 |-------------|-------|--------|
 | AUTH-01 | (shipped) | Validated |
 | AUTH-02 | (shipped) | Validated |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Completed (01-01) |
+| AUTH-04 | Phase 1 | Completed (01-01) |
+| AUTH-05 | Phase 1 | Completed (01-01) |
+| AUTH-06 | Phase 1 | Completed (01-01) |
 | AUTH-07 | Phase 1 | Pending |
-| AUTH-08 | Phase 1 | Pending |
-| AUTH-09 | Phase 1 | Pending |
+| AUTH-08 | Phase 1 | Completed (01-01) |
+| AUTH-09 | Phase 1 | Completed (01-01) |
 | AUTH-10 | Phase 1 | Pending |
 | AUTH-11 | Phase 1 | Pending |
 | AUTH-12 | Phase 1 | Pending |
@@ -321,7 +321,7 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | INTG-16 | Phase 2 | Pending |
 | INTG-17 | Phase 2 | Pending |
 | INTG-18 | Phase 2 | Pending |
-| INTG-19 | Phase 1 | Pending |
+| INTG-19 | Phase 1 | Completed (01-01) |
 | INTG-20 | Phase 2 | Pending |
 | INTG-21 | Phase 2 | Pending |
 | INTG-22 | Phase 2 | Pending |

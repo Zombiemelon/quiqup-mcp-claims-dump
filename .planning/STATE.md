@@ -10,20 +10,27 @@
 ## Current Position
 
 - **current_phase:** 1
-- **current_plan:** none
-- **status:** roadmap_created
-- **progress:** 0/12 phases complete
+- **current_plan:** 01-02 (next)
+- **status:** in_progress
+- **progress:** 0/12 phases complete (Phase 1: 1/4 plans complete)
 
 ```
-[                    ] 0% (0/12 phases)
+[                    ] 0% (0/12 phases) — Phase 1 1/4 plans
 ```
 
 ## Performance Metrics
 
 - Phases completed: 0
-- Requirements shipped (v1): 32 / 115 (pre-existing baseline)
-- Requirements remaining (v1): 83
+- Plans completed: 1 (01-01)
+- Requirements shipped (v1): 39 / 115 (32 pre-existing baseline + 7 from 01-01)
+- Requirements remaining (v1): 76
 - Service-host families with Langfuse eval: 2 (Platform via create_lastmile_order, Fulfilment via existing baseline) — Phase 12 closes the rest
+
+### Plan Execution Log
+
+| Phase | Plan | Duration | Tasks | Files | Completed |
+| ----- | ---- | -------- | ----- | ----- | --------- |
+| 01    | 01   | 3m 47s   | 2     | 11    | 2026-05-19 |
 
 ## Accumulated Context
 
@@ -33,6 +40,9 @@
 - 2026-05-19: Phase 12 ("Eval Coverage Pass") is a dedicated invariant-validation phase rather than spreading evals into each feature phase, because eval authoring benefits from cross-family pattern consistency.
 - 2026-05-19: AUTH-07 (`update_account`) and FIN-05 (`update_bank_details`) hit the same PUT /accounts endpoint with different payload constraints — modeled as two distinct tools with disambiguating descriptions; collision resolved during Phase 10 planning.
 - 2026-05-19: SRVR-01 / SRVR-02 expose-or-keep-internal decision deferred to Phase 11 plan.
+- 2026-05-19 (01-01): Output schemas for the seven Phase-1 read tools left as `z.object({}).passthrough()` — payloads are partner-shape-dependent; tightening risks false rejects when upstream adds fields. M4 will retroactively harden as needed.
+- 2026-05-19 (01-01): `get_account_capabilities.id` defaults to `"me"` (matches QuiqDash boot-time call shape); `get_account_by_id.id` has no default so admin/impersonation calls are always explicit.
+- 2026-05-19 (01-01): Tool-surface snapshot pre-existing drift (`update_order_waypoint` missing from baseline despite being registered since PR #13) auto-fixed under Rule 3 to unblock EVAL_GATE verification.
 
 ### Todos
 
@@ -44,8 +54,9 @@
 
 ## Session Continuity
 
-- **Last session:** Roadmap created from REQUIREMENTS.md (83 to-build requirements mapped across 12 phases).
-- **Next session:** `/gsd:plan-phase 1` to decompose Phase 1 into executable plans.
+- **Last session:** 2026-05-19 — completed Plan 01-01 (Auth & Account reads). 7 new MCP tools registered, 23 MSW-mocked tests, tool-surface snapshot bumped. AUTH-03/04/05/06/08/09 + INTG-19 marked shipped.
+- **Next session:** `/gsd:execute-plan 01-02` (Addresses, geo lookups, Google Places + reason codes — Wave 2 of Phase 1).
 
 ---
 *State initialized: 2026-05-19*
+*Last updated: 2026-05-19 (post 01-01 execution)*
