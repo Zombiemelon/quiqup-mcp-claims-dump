@@ -85,6 +85,20 @@ export function isQuiqupEnvironment(v: unknown): v is QuiqupEnvironment {
 }
 
 /**
+ * Canonical integration-source enum (Shopify, WooCommerce, Salla).
+ *
+ * Shared so the read side (`list_integration_connections[].source` doc) and
+ * the write/delete side (`delete_integration_source.source`,
+ * `repair_integration_orders.source`) move together. Adding a fourth family
+ * (Magento, BigCommerce, etc.) is a one-line change here — drift between the
+ * read shape and the delete/repair schemas can no longer happen silently
+ * (02-REVIEW WR-05).
+ */
+export const INTEGRATION_SOURCES = ["shopify", "woocommerce", "salla"] as const;
+export type IntegrationSource = (typeof INTEGRATION_SOURCES)[number];
+export const integrationSourceField = z.enum(INTEGRATION_SOURCES);
+
+/**
  * ISO-3166 alpha-2 country code: exactly two uppercase ASCII letters.
  *
  * Replaces the per-tool `z.string().length(2)` shape that admitted `"12"`,

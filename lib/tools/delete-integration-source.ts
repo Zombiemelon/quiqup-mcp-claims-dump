@@ -38,7 +38,7 @@ import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
-import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
+import { environmentField, getPlatformApiBaseUrl, integrationSourceField } from "@/lib/clients/quiqup-env";
 import {
   ConfirmationRequiredError,
   buildConfirmationRequiredResult,
@@ -49,13 +49,14 @@ import {
 } from "@/lib/middleware/destructive";
 
 const inputSchema = z.object({
-  source: z
-    .enum(["shopify", "woocommerce", "salla"])
-    .describe(
-      "Integration source — MUST match the connection's `source` field as " +
-        "returned by `list_integration_connections`. Enum-bound to prevent " +
-        "path injection (any other value is rejected at schema-parse).",
-    ),
+  // 02-REVIEW WR-05: use the shared `integrationSourceField` so the read side
+  // (list_integration_connections[].source doc) and this delete side cannot
+  // silently drift when a fourth family lands upstream.
+  source: integrationSourceField.describe(
+    "Integration source — MUST match the connection's `source` field as " +
+      "returned by `list_integration_connections`. Enum-bound to prevent " +
+      "path injection (any other value is rejected at schema-parse).",
+  ),
   shop_name: z
     .string()
     .min(1)

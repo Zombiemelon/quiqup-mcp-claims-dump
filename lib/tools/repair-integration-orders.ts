@@ -30,7 +30,7 @@ import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
 import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
-import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
+import { environmentField, getPlatformApiBaseUrl, integrationSourceField } from "@/lib/clients/quiqup-env";
 
 const inputSchema = z.object({
   ids: z
@@ -54,12 +54,12 @@ const inputSchema = z.object({
     .describe(
       "Storefront URL of the source shop, e.g. https://acme.myshopify.com.",
     ),
-  source: z
-    .enum(["shopify", "woocommerce", "salla"])
-    .describe(
-      "Source channel — must match what `list_integration_connections` " +
-        "returns for this shop.",
-    ),
+  // 02-REVIEW WR-05: shared `integrationSourceField` (see quiqup-env.ts) so
+  // the read/write source enums move together.
+  source: integrationSourceField.describe(
+    "Source channel — must match what `list_integration_connections` " +
+      "returns for this shop.",
+  ),
   // NOTE: `user_id` is intentionally NOT a caller arg (02-REVIEW BL-04). The
   // handler binds it to `auth.userId` server-side from the JWT subject so an
   // LLM cannot supply a foreign user_id and have repair-orders mutate another
