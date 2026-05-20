@@ -121,6 +121,11 @@ import { spec as bulkOrdersLookupSpec } from "@/lib/tools/bulk-orders-lookup";
 import { spec as getOrderHistorySpec } from "@/lib/tools/get-order-history";
 import { spec as listOrderAuditEventsSpec } from "@/lib/tools/list-order-audit-events";
 
+// Phase 3 / Wave 3: Orders read path — Platform reads (ORDL-04/05/06).
+import { spec as findOrderByIdOrBarcodeSpec } from "@/lib/tools/find-order-by-id-or-barcode";
+import { spec as listDepotsSpec } from "@/lib/tools/list-depots";
+import { spec as listMissionsFilterSpec } from "@/lib/tools/list-missions-filter";
+
 // Staging-only state-machine helpers (Postman: Quiqup Staging State Change).
 // Each pins `environment: z.literal("staging")` at the input schema, so any
 // non-staging call is rejected by the validator before the handler runs.
@@ -246,6 +251,11 @@ const handler = createMcpHandler(
     // -- Phase 3: Orders read path — Quiqup REST history + Audit events (ORDS-02/05) --
     registerTool(server, getOrderHistorySpec);
     registerTool(server, listOrderAuditEventsSpec);
+
+    // -- Phase 3: Orders read path — Platform reads (ORDL-04/05/06) --
+    registerTool(server, findOrderByIdOrBarcodeSpec);
+    registerTool(server, listDepotsSpec);
+    registerTool(server, listMissionsFilterSpec);
 
     // -- Staging-only state-machine helpers (env pinned in the schema) --
     registerTool(server, setOutForDeliveryBatchSpec);
