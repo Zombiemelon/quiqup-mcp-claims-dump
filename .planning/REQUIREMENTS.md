@@ -72,7 +72,7 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 - [x] **ORDL-04**: `find_order_by_id_or_barcode` — `GET /quiqdash/orders/find_by_id_or_barcode` (Platform)
 - [x] **ORDL-05**: `list_depots` — `GET /quiqdash/depots` (Platform)
 - [x] **ORDL-06**: `list_missions_filter` — `GET /quiqdash/missions` (Platform) — autocomplete form
-- [ ] **ORDL-07**: `download_orders_export` — `GET /orders/download` (Ex-core) — CSV
+- [x] **ORDL-07**: `download_orders_export` — `GET /orders/download` (Ex-core) — CSV
 - [ ] **ORDL-08**: `list_partner_cancellation_reasons` — `GET /orders/partner-cancellation-reasons` (Platform/Quiqup REST)
 - [ ] **ORDL-09**: `list_on_hold_reasons` — `GET /quiqdash/orders/states/on_hold_reasons` (Platform)
 - [ ] **ORDL-10**: `list_return_to_origin_reasons` — `GET /quiqdash/orders/states/return_to_origin_reasons` (Platform)
@@ -88,7 +88,7 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 - [ ] **ORDS-05**: `list_order_audit_events` — `GET {AUDIT_BASE_URL}/events?resourceID.eq={orderUuid}` (Audit) — new client
 - [ ] **ORDS-06**: `create_order_charge` — `POST /quiqdash/order-charge` (Platform)
 - [ ] **ORDS-07**: `update_order_weight` — `PATCH /quiqdash/orders/{orderId}/weight` (Platform)
-- [ ] **ORDS-08**: `upload_order_document` — `POST /orders-by-client-id/{clientOrderID}/documents` (Orders Core REST) — multipart
+- [x] **ORDS-08**: `upload_order_document` — `POST /orders-by-client-id/{clientOrderID}/documents` (Orders Core REST) — multipart
 
 ### Orders — Creation (ORDC)
 
@@ -335,7 +335,7 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | ORDL-04 | Phase 3 / Plan 03-03 | Shipped (commit 05d2327) |
 | ORDL-05 | Phase 3 / Plan 03-03 | Shipped (commit 05d2327) |
 | ORDL-06 | Phase 3 / Plan 03-03 | Shipped (commit 05d2327) |
-| ORDL-07 | Phase 3 | Pending |
+| ORDL-07 | Phase 3 / Plan 03-04 | Shipped (commit 1601297) |
 | ORDL-08 | Phase 1 | Pending |
 | ORDL-09 | Phase 1 | Pending |
 | ORDL-10 | Phase 1 | Pending |
@@ -348,7 +348,7 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | ORDS-05 | Phase 3 | Pending |
 | ORDS-06 | Phase 4 | Pending |
 | ORDS-07 | Phase 4 | Pending |
-| ORDS-08 | Phase 3 | Pending |
+| ORDS-08 | Phase 3 / Plan 03-04 | Shipped (commit 69077cd) |
 | ORDC-01 | (shipped) | Validated |
 | ORDC-02 | (shipped) | Validated |
 | ORDC-03 | (shipped) | Validated |

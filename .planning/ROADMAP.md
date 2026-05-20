@@ -83,7 +83,7 @@ Plans:
 - [x] 03-01-PLAN.md — Orders Core GraphQL client + lookup_orders_ids + bulk_orders_lookup (ORDL-02/03) — Wave 1 — completed 2026-05-19
 - [x] 03-02-PLAN.md — Quiqup REST history client + Audit client (auth-exception, AUDIT_BASE_URL wiring) + get_order_history + list_order_audit_events (ORDS-02/05) — Wave 2 — completed 2026-05-19
 - [x] 03-03-PLAN.md — Platform reads: find_order_by_id_or_barcode + list_depots + list_missions_filter (ORDL-04/05/06) — Wave 3 — completed 2026-05-20
-- [ ] 03-04-PLAN.md — Ex-core CSV export client + Orders Core REST multipart client + download_orders_export + upload_order_document (ORDL-07/ORDS-08) — Wave 4
+- [x] 03-04-PLAN.md — Ex-core CSV export client + Orders Core REST multipart client + download_orders_export + upload_order_document (ORDL-07/ORDS-08) — Wave 4 — completed 2026-05-20
 - [ ] 03-05-PLAN.md — Langfuse eval coverage for 4 new Phase-3 client families + CI gate updates — Wave 5
 **UI hint**: no
 

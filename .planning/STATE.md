@@ -9,22 +9,22 @@
 
 ## Current Position
 
-- **current_phase:** 3 (in progress — Waves 1+2+3 shipped)
-- **current_plan:** 03-04 (next)
-- **status:** Phase 3 Wave 3 complete (3/5 plans shipped — Platform-API read tools landed: find_order_by_id_or_barcode + list_depots + list_missions_filter)
-- **progress:** Phase 3: 3/5 plans complete — Orders Core GraphQL + Quiqup REST + Audit clients live; ORDL-02/03 + ORDS-02/05 + ORDL-04/05/06 tools shipped
+- **current_phase:** 3 (in progress — Waves 1+2+3+4 shipped)
+- **current_plan:** 03-05 (next — Langfuse eval coverage for the 4 new Phase-3 client families)
+- **status:** Phase 3 Wave 4 complete (4/5 plans shipped — Ex-core CSV export + Orders Core REST multipart clients added; download_orders_export + upload_order_document tools live)
+- **progress:** Phase 3: 4/5 plans complete — Orders Core GraphQL + Quiqup REST + Audit + Ex-core + Orders Core REST clients live; ORDL-02/03/04/05/06/07 + ORDS-02/05/08 tools shipped
 
 ```
-[███████             ] 28% (Phase 1 complete + Phase 2 complete + Phase 3 Waves 1+2+3)
+[████████            ] 30% (Phase 1 complete + Phase 2 complete + Phase 3 Waves 1+2+3+4)
 ```
 
 ## Performance Metrics
 
 - Phases completed: 2 (Phase 1 + Phase 2)
-- Plans completed: 13 (01-01..01-04, 02-01..02-06, 03-01, 03-02, 03-03)
-- Requirements shipped (v1): see REQUIREMENTS.md (03-03 adds ORDL-04, ORDL-05, ORDL-06 to the shipped set)
-- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2). Phase-3 family evals (Orders Core GraphQL, Quiqup REST, Audit, Platform-API reads) deferred to plan 03-05 per the canonical Phase-N final-wave eval pattern.
-- New service hosts introduced this wave: 0 (Wave 3 is a consolidation wave — all three tools reuse the existing Platform-API auth+host plumbing established in Phase 1)
+- Plans completed: 14 (01-01..01-04, 02-01..02-06, 03-01, 03-02, 03-03, 03-04)
+- Requirements shipped (v1): see REQUIREMENTS.md (03-04 adds ORDL-07, ORDS-08 to the shipped set)
+- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2). Phase-3 family evals (Orders Core GraphQL, Quiqup REST, Audit, Platform-API reads, Ex-core, Orders Core REST) deferred to plan 03-05 per the canonical Phase-N final-wave eval pattern.
+- New service hosts introduced this wave: 2 (Ex-core at ex-api.quiqup.com via EX_API_BASE_URL family; Orders Core REST at orders-api.quiqup.com via ORDERS_API_BASE_URL family with FE-aligned QUIQUP_ORDERS_GRAPH_URL minus /graph fallback chain)
 
 ### Plan Execution Log
 
@@ -43,6 +43,7 @@
 | 03    | 01   | ~10m    | 3     | 6     | 2026-05-19 |
 | 03    | 02   | ~15m    | 3     | 6     | 2026-05-19 |
 | 03    | 03   | ~3m     | 2     | 5     | 2026-05-20 |
+| 03    | 04   | ~10m    | 3     | 10    | 2026-05-20 |
 
 ## Accumulated Context
 
@@ -83,6 +84,11 @@
 - 2026-05-20 (03-03): `find_order_by_id_or_barcode.intention` is a free-form `z.string().min(1)` (NOT a `z.enum`) — the upstream BE may add new transitions over time and over-constraining the client would silently break new intentions the moment Quiqup ships them. The description enumerates the observed-set (13 values from `app/hooks/order/use-bulk-change-state.ts`); bad inputs surface via the upstream structured 200-with-error envelope. T-03-19 accept disposition.
 - 2026-05-20 (03-03): `list_depots` translates snake_case `main_depot` (MCP-side input field) → camelCase `mainDepot` (upstream wire-format query key) inside the handler. Booleans serialised via `String(args.main_depot)` to produce the literal `"true"`/`"false"` strings Go BE parses. Tested at both layers: schema-rejection of empty values, MSW assertion that the outbound URL carries `mainDepot=true`. Establishes the "wire-format translation testing" pattern for future tools where MCP-side naming diverges from upstream.
 - 2026-05-20 (03-03): `find_order_by_id_or_barcode` no-match path is a 200 with `error` populated, NOT an HTTP 4xx — handler returns the upstream envelope verbatim (no exception, no `isError` flag). Rationale: the LLM needs to see the error message to route to the next step (e.g. ask the operator for a different ID); raising an exception would lose that information. T-03-20 accept disposition for the full-envelope read.
+- 2026-05-20 (03-04): Canonical binary-response envelope locked in as `{ contentType, base64, filenameHint }` — Phase 5 (PDF labels), Phase 7 (inventory CSV), Phase 10 (Zoho PDFs) MUST reuse this exact shape verbatim rather than re-deriving a per-host envelope. Client layer returns the two-field `{ contentType, base64 }`; tool layer adds `filenameHint`. Ex-core's CSV export is the anchor implementation.
+- 2026-05-20 (03-04): Orders Core REST host resolver implements the FE-aligned fallback chain `ORDERS_API_BASE_URL → QUIQUP_ORDERS_GRAPH_URL minus /graph → canonical` (source-doc §1 line 21). Preserves the dev ergonomic where ONE env var (`QUIQUP_ORDERS_GRAPH_URL=https://localhost.test/graph`) redirects BOTH the 03-01 GraphQL client AND this REST client to the same dev host. Per-environment overrides honoured (prod override does not affect staging).
+- 2026-05-20 (03-04): `OrdersCoreRestClient.requestMultipart` deliberately omits the `Content-Type` header — fetch() sets `multipart/form-data; boundary=<random>` automatically from the FormData body. Manual override clobbers the boundary and the upstream rejects the body. Locked in by a runtime test that captures the outbound Content-Type and asserts `startsWith("multipart/form-data")` AND `contains("boundary=")`. This is the canonical multipart pattern for any future MCP tool uploading binary payloads.
+- 2026-05-20 (03-04): `upload_order_document` (ORDS-08) is the first write tool in Phase 3 — carries the BL-01 canonical guardrails block (rateLimit 10/min, idempotency on idempotency_key with 15min TTL, audit:true) AND structurally omits user_id/actor_id/actor_email from its input schema (BL-04 server-binding — identity bound to auth.userId at handler level). Pre-flight 10MB cap (13_500_000 base64 chars) enforced BEFORE JWT mint AND BEFORE FormData construction so abusive callers cost the MCP nothing upstream.
+- 2026-05-20 (03-04): Ex-core gets a SEPARATE ExCoreError class (not QuiqupHttpError reuse) — distinct service host with its own operational backstop, even though the auth bridge is shared. Mirrors QuiqupHttpError's shape (status + body) so callers branch on err.status uniformly. Conversely, Orders Core REST reuses QuiqupHttpError because Orders Core is a Quiqup-prefixed service and the registerTool wrapper's QuiqupHttpError → MCP-error mapping is the desired behaviour. Establishes the policy: NEW service-host families get their own error class; sibling clients of an existing host family reuse the existing class.
 
 ### Todos
 
@@ -94,9 +100,9 @@
 
 ## Session Continuity
 
-- **Last session:** 2026-05-20 — completed Plan 03-03 (Phase 3 Wave 3: Platform-API read tools — find_order_by_id_or_barcode + list_depots + list_missions_filter — ORDL-04/05/06). Shipped: three new tool spec modules (`lib/tools/find-order-by-id-or-barcode.ts`, `lib/tools/list-depots.ts`, `lib/tools/list-missions-filter.ts`), all reusing the existing Platform-API plumbing (no new service client). 15-test MSW Vitest suite at `tests/tools/orders-platform-reads.test.ts` locks in URL-query forwarding (T-03-18 hygiene + snake_case → camelCase wire-translation for `main_depot` → `mainDepot`), schema-rejection of empty required strings, the unauthenticated-caller refusal (T-03-17), the 401 → QuiqupHttpError mapping, and the 200-with-error envelope contract on find_order_by_id_or_barcode (no exception, no isError flag). `app/[transport]/route.ts` registers all three under a Phase-3 Wave-3 comment block; `evals/snapshots/tool-surface.json` records all three as `enabled` (91 total tools). Full suite: 559 passed, 3 skipped, 0 regressions. `EVAL_GATE=1 bun run eval:tool-surface` exits 0. Commits: `05d2327` (Task 1 — tool specs) and `e28ff04` (Task 2 — tests + registration + snapshot bump).
-- **Next session:** `/gsd:execute-phase 3` continues with Plan 03-04 (next Phase-3 wave per ROADMAP.md).
+- **Last session:** 2026-05-20 — completed Plan 03-04 (Phase 3 Wave 4: Ex-core CSV export + Orders Core REST multipart upload — ORDL-07/ORDS-08). Shipped: two NEW service clients (`lib/clients/ex-core.ts` with EX_API_BASE_URL family, `lib/clients/orders-core-rest.ts` with FE-aligned QUIQUP_ORDERS_GRAPH_URL minus /graph fallback chain), two tool specs (`lib/tools/download-orders-export.ts` returning the canonical `{ contentType, base64, filenameHint }` binary envelope, `lib/tools/upload-order-document.ts` carrying BL-01 canonical guardrails + BL-04 server-bound identity + 10MB pre-flight cap + filename hygiene), and three test files (6 ex-core client tests, 6 orders-core-rest client tests, 14 tool tests across 2 describe blocks). `requestMultipart` deliberately omits Content-Type — runtime test locks in the multipart-without-manual-Content-Type contract by asserting the captured Content-Type startsWith multipart/form-data AND contains boundary= parameter. `app/[transport]/route.ts` registers both new tools under a Phase-3 Wave-4 comment block; `evals/snapshots/tool-surface.json` records both as `enabled` (93 total tools, +2 from Wave 3's 91). Full suite: 585 passed, 3 skipped, 0 regressions (+26 vs Wave 3 baseline). `EVAL_GATE=1 bun run eval:tool-surface` exits 0. Commits: `1601297` (Task 1 — Ex-core client + ORDL-07), `69077cd` (Task 2 — Orders Core REST + ORDS-08), `c9e49c5` (Task 3 — tool tests + registration + snapshot).
+- **Next session:** `/gsd:execute-phase 3` continues with Plan 03-05 (final Phase-3 wave — Langfuse eval coverage for the 4 new client families + CI gate updates per the canonical Phase-N final-wave eval pattern).
 
 ---
 *State initialized: 2026-05-19*
-*Last updated: 2026-05-20 (post 03-03 execution — Phase 3 Wave 3 complete; Platform-API read tools ORDL-04/05/06 live)*
+*Last updated: 2026-05-20 (post 03-04 execution — Phase 3 Wave 4 complete; Ex-core CSV export + Orders Core REST multipart upload — ORDL-07 + ORDS-08 live)*
