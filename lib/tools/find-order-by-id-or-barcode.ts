@@ -49,7 +49,9 @@ const inputSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "Target-state intention. The BE uses this to validate the looked-up order is in a compatible source state for the named transition. Observed values: 'set_collected', 'set_received_at_depot', 'set_at_depot', 'set_in_transit', 'set_scheduled', 'set_delivery_complete', 'set_on_hold', 'set_return_to_origin', 'set_returned_to_origin', 'set_delivery_failed', 'set_collection_failed', 'set_ready_for_collection', 'set_cancelled'. Pass the intention that matches the operation you're about to perform.",
+      "Target-state intention. The BE uses this to validate the looked-up order is in a compatible source state for the named transition. " +
+        "Modelled as free-form z.string() (T-03-19) — NOT z.enum — because the BE may add new intentions over time and over-constraining the client would silently break new transitions; the 03-REVIEW WR-02 lift-the-comment lock pins this policy at the schema layer (mirrors the file header rationale at line 12-17). " +
+        "Observed values: 'set_collected', 'set_received_at_depot', 'set_at_depot', 'set_in_transit', 'set_scheduled', 'set_delivery_complete', 'set_on_hold', 'set_return_to_origin', 'set_returned_to_origin', 'set_delivery_failed', 'set_collection_failed', 'set_ready_for_collection', 'set_cancelled'. Pass the intention that matches the operation you're about to perform.",
     ),
   environment: environmentField,
 });
