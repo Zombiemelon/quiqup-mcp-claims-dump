@@ -38,14 +38,21 @@ import {
 const PROD = EX_CORE_BASE_URLS.production;
 
 const originalProdUrl = process.env.EX_API_BASE_URL;
+const originalCanonicalProdUrl = process.env.QUIQUP_EX_API_BASE_URL;
 const originalStagingUrl = process.env.EX_API_STAGING_BASE_URL;
 
 beforeEach(() => {
   delete process.env.EX_API_BASE_URL;
+  delete process.env.QUIQUP_EX_API_BASE_URL;
   delete process.env.EX_API_STAGING_BASE_URL;
 });
 
 afterEach(() => {
+  if (originalCanonicalProdUrl === undefined) {
+    delete process.env.QUIQUP_EX_API_BASE_URL;
+  } else {
+    process.env.QUIQUP_EX_API_BASE_URL = originalCanonicalProdUrl;
+  }
   if (originalProdUrl === undefined) {
     delete process.env.EX_API_BASE_URL;
   } else {
@@ -157,6 +164,17 @@ describe("ExCoreClient", () => {
     const result = await client.request("GET", "/orders/download");
     expect(hit).toBe(true);
     expect(result).toEqual({ ok: true });
+  });
+
+  it("honours QUIQUP_EX_API_BASE_URL (canonical) env override", () => {
+    process.env.QUIQUP_EX_API_BASE_URL = "https://canonical.test";
+    expect(getExCoreBaseUrl("production")).toBe("https://canonical.test");
+  });
+
+  it("QUIQUP_EX_API_BASE_URL takes precedence over EX_API_BASE_URL alias", () => {
+    process.env.QUIQUP_EX_API_BASE_URL = "https://canonical.test";
+    process.env.EX_API_BASE_URL = "https://alias.test";
+    expect(getExCoreBaseUrl("production")).toBe("https://canonical.test");
   });
 
   it("encodes bracket-style filter query keys", async () => {

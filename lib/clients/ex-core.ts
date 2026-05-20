@@ -4,8 +4,11 @@
  *
  * Service host: docs/quiqup-api-full-frontend-extract.md §1 line 18 names
  * Ex-core as a DISTINCT egress host with the FE env-var family
- * `VITE_EX_API_BASE_URL` / `VITE_EX_API_STAGING_BASE_URL`. We mirror that
- * with `EX_API_BASE_URL` / `EX_API_STAGING_BASE_URL` on the server.
+ * `VITE_EX_API_BASE_URL` / `VITE_EX_API_STAGING_BASE_URL`. On the server
+ * the canonical override is `QUIQUP_EX_API_BASE_URL` (matching .env.example
+ * and the pre-existing update-order-waypoint tool); the newer
+ * `EX_API_BASE_URL` is accepted as an alias for symmetry with the staging
+ * variable `EX_API_STAGING_BASE_URL`.
  *
  * Auth model: V3b same-IdP exchange — IDENTICAL to quiqup-lastmile.ts,
  * quiqup-fulfilment.ts, and orders-core-graphql.ts. The handler resolves
@@ -53,7 +56,10 @@ export const EX_CORE_BASE_URLS = {
 /**
  * Env-var-overridable base-URL resolver. Per-environment overrides:
  *   - staging: process.env.EX_API_STAGING_BASE_URL.
- *   - production: process.env.EX_API_BASE_URL.
+ *   - production: process.env.QUIQUP_EX_API_BASE_URL (canonical, also used
+ *     by lib/tools/update-order-waypoint.ts and .env.example) OR the
+ *     newer process.env.EX_API_BASE_URL alias for symmetry with the
+ *     staging variable.
  * Overrides exist for test/dev hooks (MSW binds to the override host when
  * set) and take precedence over the canonical URLs. Setting prod does NOT
  * affect staging and vice-versa.
@@ -64,7 +70,11 @@ export function getExCoreBaseUrl(env: QuiqupEnvironment = "production"): string 
       process.env.EX_API_STAGING_BASE_URL ?? EX_CORE_BASE_URLS.staging
     );
   }
-  return process.env.EX_API_BASE_URL ?? EX_CORE_BASE_URLS.production;
+  return (
+    process.env.QUIQUP_EX_API_BASE_URL ??
+    process.env.EX_API_BASE_URL ??
+    EX_CORE_BASE_URLS.production
+  );
 }
 
 /**

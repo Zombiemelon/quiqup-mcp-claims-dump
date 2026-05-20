@@ -59,6 +59,7 @@ const ORDERS_REST_PROD = "https://orders-api.quiqup.com";
 
 const originalEnv = {
   EX_API_BASE_URL: process.env.EX_API_BASE_URL,
+  QUIQUP_EX_API_BASE_URL: process.env.QUIQUP_EX_API_BASE_URL,
   EX_API_STAGING_BASE_URL: process.env.EX_API_STAGING_BASE_URL,
   ORDERS_API_BASE_URL: process.env.ORDERS_API_BASE_URL,
   ORDERS_API_STAGING_BASE_URL: process.env.ORDERS_API_STAGING_BASE_URL,
@@ -69,6 +70,7 @@ const originalEnv = {
 beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.EX_API_BASE_URL;
+  delete process.env.QUIQUP_EX_API_BASE_URL;
   delete process.env.EX_API_STAGING_BASE_URL;
   delete process.env.ORDERS_API_BASE_URL;
   delete process.env.ORDERS_API_STAGING_BASE_URL;
