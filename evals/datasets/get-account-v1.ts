@@ -68,14 +68,19 @@ export const items: GetAccountItem[] = [
     },
     expectedOutput: {
       tool: "get_account_capabilities",
-      args: { id: "me" },
+      // `id` defaults to "me" in the production schema — passing it
+      // explicitly is redundant, and the LLM correctly omits it when the
+      // prompt doesn't demand a non-default id. Asserting {} here scores
+      // the behavior we actually want, not an over-prescriptive contract.
+      args: {},
     },
   },
   {
     input: { request: "List my warehouse addresses." },
     expectedOutput: {
       tool: "list_account_addresses",
-      args: { id: "me" },
+      // Same default-behaviour relaxation as above (`id` defaults to "me").
+      args: {},
     },
   },
   {
