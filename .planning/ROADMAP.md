@@ -97,7 +97,13 @@ Plans:
   3. An agent can mutate a single order's metadata via `export_order` / `update_fulfilment_order_status` / `create_order_charge` / `update_order_weight`.
   4. An agent can create a mission and transfer orders between missions via `create_mission` and `transfer_mission_orders`.
   5. Every DESTRUCTIVE tool in this phase rejects calls missing `confirm: true` with a uniform error shape and exposes the affected order count in its response so agents can verify scope before confirming.
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 04-01-PLAN.md — Factory + 6 forward-path batch transitions (ORDT-03..08) — Wave 1
+- [ ] 04-02-PLAN.md — 6 exception-path transitions: 4 reason-bearing + set_returned_to_origin + unpool_order (ORDT-09..14) — Wave 2
+- [ ] 04-03-PLAN.md — 4 single-order mutations (ORDS-03/04/06/07) — Wave 3
+- [ ] 04-04-PLAN.md — Creation + missions: ORDC-04, ORDC-05 multipart, MISS-01, MISS-02 — Wave 4
+- [ ] 04-05-PLAN.md — Langfuse eval coverage for 4 Phase-4 tool families + CI gate updates — Wave 5
 **UI hint**: no
 
 ### Phase 5: Labels, Slips & PDFs
@@ -200,7 +206,7 @@ Plans:
 | 1. Account, Auth & Reference Data | 4/4 | Plans complete (awaiting gsd-verifier) | 2026-05-19 |
 | 2. Integrations (Shopify / WooCommerce / Salla) | 2/6 | In progress (Waves 1+2 complete) | 2026-05-19 |
 | 3. Orders — Read Path | 3/5 | In progress (Waves 1+2+3 complete) | 2026-05-20 |
-| 4. Orders — Write Path & Lifecycle | 0/0 | Not started | - |
+| 4. Orders — Write Path & Lifecycle | 0/5 | Plans created | - |
 | 5. Labels, Slips & PDFs | 0/0 | Not started | - |
 | 6. Inbound completion + Fulfilment gaps | 0/0 | Not started | - |
 | 7. Inventory expansion | 0/0 | Not started | - |
