@@ -46,5 +46,5 @@ jobs:
             CLAUDE.md / AGENTS.md and docs/quiqup-api/ have the project
             conventions and Quiqup API canonical reference.
           claude_args: |
-            --max-turns 15
+            --max-turns 30
             --model claude-sonnet-4-6
