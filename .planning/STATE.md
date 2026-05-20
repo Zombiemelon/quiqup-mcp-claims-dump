@@ -9,22 +9,22 @@
 
 ## Current Position
 
-- **current_phase:** 3 (in progress — Wave 1 shipped)
-- **current_plan:** 03-02 (next)
-- **status:** Phase 3 Wave 1 complete (1/5 plans shipped — Orders Core GraphQL client landed)
-- **progress:** Phase 3: 1/5 plans complete — Orders Core GraphQL client + ORDL-02/03 tools live
+- **current_phase:** 3 (in progress — Waves 1+2 shipped)
+- **current_plan:** 03-03 (next)
+- **status:** Phase 3 Wave 2 complete (2/5 plans shipped — Quiqup REST + Audit clients landed)
+- **progress:** Phase 3: 2/5 plans complete — Orders Core GraphQL + Quiqup REST + Audit clients live; ORDL-02/03 + ORDS-02/05 tools shipped
 
 ```
-[█████               ] 22% (Phase 1 complete + Phase 2 complete + Phase 3 Wave 1)
+[██████              ] 25% (Phase 1 complete + Phase 2 complete + Phase 3 Waves 1+2)
 ```
 
 ## Performance Metrics
 
 - Phases completed: 2 (Phase 1 + Phase 2)
-- Plans completed: 11 (01-01..01-04, 02-01..02-06, 03-01)
-- Requirements shipped (v1): see REQUIREMENTS.md (03-01 adds ORDL-02, ORDL-03 to the shipped set)
-- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2). Phase-3 family eval (Orders Core GraphQL) deferred to plan 03-05 per the canonical Phase-N final-wave eval pattern.
-- New service hosts introduced this wave: 1 (`orders-api.quiqup.com/graph` — Orders Core GraphQL, distinct from Last-Mile REST and Platform / Fulfilment)
+- Plans completed: 12 (01-01..01-04, 02-01..02-06, 03-01, 03-02)
+- Requirements shipped (v1): see REQUIREMENTS.md (03-02 adds ORDS-02, ORDS-05 to the shipped set)
+- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2). Phase-3 family evals (Orders Core GraphQL, Quiqup REST, Audit) deferred to plan 03-05 per the canonical Phase-N final-wave eval pattern.
+- New service hosts introduced this wave: 2 (`api.quiqup.com` — public Quiqup REST, distinct from Last-Mile and Platform; `audit.quiqup.com` — Audit service, SECOND auth-exception host after Google Places)
 
 ### Plan Execution Log
 
@@ -41,6 +41,7 @@
 | 02    | 05   | ~15m    | 3     | 6     | 2026-05-19 |
 | 02    | 06   | ~25m    | 3     | 17    | 2026-05-19 |
 | 03    | 01   | ~10m    | 3     | 6     | 2026-05-19 |
+| 03    | 02   | ~15m    | 3     | 6     | 2026-05-19 |
 
 ## Accumulated Context
 
