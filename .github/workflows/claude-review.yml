@@ -45,6 +45,14 @@ jobs:
             issues that would actually break or surprise. Skip nits.
             CLAUDE.md / AGENTS.md and docs/quiqup-api/ have the project
             conventions and Quiqup API canonical reference.
+          # --max-turns bumped from 30 after a real PR hit the cap mid-review
+          # (anthropics/claude-code-action#1177 confirmed the flag is honored).
+          # --allowedTools mirrors the official pr-review-comprehensive.yml
+          # example so turns are spent on review actions, not broad
+          # exploration of the full MCP/Bash surface.
+          # The "directory mismatch for tsconfig.json, fd 4" line in logs is a
+          # harmless Bun 1.3.6 bug (anthropics/claude-code-action#1246) — ignore.
           claude_args: |
-            --max-turns 30
+            --max-turns 60
             --model claude-sonnet-4-6
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
