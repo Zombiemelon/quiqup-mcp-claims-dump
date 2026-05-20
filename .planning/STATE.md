@@ -5,25 +5,25 @@
 ## Project Reference
 
 - **Core value:** Every backend endpoint that powers Quiqdash v3 must be reachable from an LLM via a single MCP server, with the same auth, the same error semantics, and the same observability as the existing staging-verified tools.
-- **Current focus:** Phase 3 — Orders read path (Orders Core GraphQL + Audit + Ex-core CSV + Quiqup REST history)
+- **Current focus:** Phase 4 — Orders write path & lifecycle (status transitions, charges, weight edits, exports, fulfilment-status patches, internal/bulk creates, mission orchestration — every tool DESTRUCTIVE-gated)
 
 ## Current Position
 
-- **current_phase:** 3 (in progress — Waves 1+2+3+4 shipped)
-- **current_plan:** 03-05 (next — Langfuse eval coverage for the 4 new Phase-3 client families)
-- **status:** Phase 3 Wave 4 complete (4/5 plans shipped — Ex-core CSV export + Orders Core REST multipart clients added; download_orders_export + upload_order_document tools live)
-- **progress:** Phase 3: 4/5 plans complete — Orders Core GraphQL + Quiqup REST + Audit + Ex-core + Orders Core REST clients live; ORDL-02/03/04/05/06/07 + ORDS-02/05/08 tools shipped
+- **current_phase:** 4 (next — Orders Write Path & Lifecycle)
+- **current_plan:** 04-01 (not yet planned)
+- **status:** Phase 3 complete (5/5 plans shipped — Langfuse eval coverage for 4 new Phase-3 client families + CI gate updates added in Wave 5)
+- **progress:** Phase 3 done: Orders Core GraphQL + Quiqup REST + Audit + Ex-core + Orders Core REST clients live; ORDL-02/03/04/05/06/07 + ORDS-02/05/08 tools shipped; EVAL_GATE=1 CI now blocks on Phase-3 family regressions
 
 ```
-[████████            ] 30% (Phase 1 complete + Phase 2 complete + Phase 3 Waves 1+2+3+4)
+[█████               ] 25% (Phase 1 complete + Phase 2 complete + Phase 3 complete)
 ```
 
 ## Performance Metrics
 
-- Phases completed: 2 (Phase 1 + Phase 2)
-- Plans completed: 14 (01-01..01-04, 02-01..02-06, 03-01, 03-02, 03-03, 03-04)
-- Requirements shipped (v1): see REQUIREMENTS.md (03-04 adds ORDL-07, ORDS-08 to the shipped set)
-- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2). Phase-3 family evals (Orders Core GraphQL, Quiqup REST, Audit, Platform-API reads, Ex-core, Orders Core REST) deferred to plan 03-05 per the canonical Phase-N final-wave eval pattern.
+- Phases completed: 3 (Phase 1 + Phase 2 + Phase 3)
+- Plans completed: 15 (01-01..01-04, 02-01..02-06, 03-01..03-05)
+- Requirements shipped (v1): see REQUIREMENTS.md (03-05 adds no new tools — eval-only wave)
+- Service-host families with Langfuse eval: 13 (4 Phase-1 + 5 Phase-2 + 4 Phase-3: Orders Core GraphQL, Quiqup REST+Audit combined, Ex-core, Orders Core REST). Per-family eval invariant satisfied for all shipped phases.
 - New service hosts introduced this wave: 2 (Ex-core at ex-api.quiqup.com via EX_API_BASE_URL family; Orders Core REST at orders-api.quiqup.com via ORDERS_API_BASE_URL family with FE-aligned QUIQUP_ORDERS_GRAPH_URL minus /graph fallback chain)
 
 ### Plan Execution Log
@@ -44,6 +44,7 @@
 | 03    | 02   | ~15m    | 3     | 6     | 2026-05-19 |
 | 03    | 03   | ~3m     | 2     | 5     | 2026-05-20 |
 | 03    | 04   | ~10m    | 3     | 10    | 2026-05-20 |
+| 03    | 05   | ~25m    | 3     | 14    | 2026-05-20 |
 
 ## Accumulated Context
 
