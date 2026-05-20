@@ -74,6 +74,17 @@ const outputSchema = z
  * treats query text as the response contract. Mirrors
  * docs/quiqup-api-full-frontend-extract.md §19 E lines 4504-4516 exactly.
  */
+// 03-REVIEW WR-03: `pageInfo { hasNextPage }` + `totalCount` added so
+// the agent can detect silent truncation if upstream `clientOrderIDIn`
+// semantics ever broaden (e.g. soft-deleted orders, fuzzy match) and
+// pushes the result over the hard-coded `first: 200` cap. Today the
+// schema caps `client_order_ids` at 200 and `clientOrderIDIn` is exact-
+// match, so truncation cannot occur — but `lookup_orders_ids` (the
+// agent's typical predecessor call in this flow) already requests
+// `pageInfo + totalCount`. Asymmetric selection across two tools the
+// agent uses in sequence is a debugging footgun; this restores
+// symmetry. The handler does NOT branch on these fields — surfacing
+// them in the response is enough for the agent to spot truncation.
 const BULK_ORDERS_LOOKUP_QUERY = `query bulkOrdersLookup($where: OrderWhereInput) {
   orders(first: 200, where: $where) {
     edges {
@@ -92,6 +103,8 @@ const BULK_ORDERS_LOOKUP_QUERY = `query bulkOrdersLookup($where: OrderWhereInput
         }
       }
     }
+    pageInfo { hasNextPage }
+    totalCount
   }
 }`;
 
@@ -105,7 +118,11 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     "add-by-id flow. Returns " +
     "`{ orders: { edges: [{ node: { id, uuid, clientOrderID, state, items: " +
     "[{ id, name, parcelBarcode, parcelBarcodeGeneratedBy, quantity, weight " +
-    "}] } }] } }`. " +
+    "}] } }], pageInfo: { hasNextPage }, totalCount } }`. The pageInfo + " +
+    "totalCount fields are surfaced so the agent can detect silent " +
+    "truncation if `totalCount > 200` ever holds — today the schema's " +
+    "`client_order_ids.max(200)` cap means this is informational only " +
+    "(03-REVIEW WR-03 lift). " +
     "Typical flow: call `lookup_orders_ids` first to get a matching set of " +
     "ids, then this tool to fetch the per-item weights + parcel barcodes for " +
     "the ones you want to mutate. For dashboard/listing rows, use " +

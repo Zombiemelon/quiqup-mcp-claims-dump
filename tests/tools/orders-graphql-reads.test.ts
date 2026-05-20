@@ -332,4 +332,76 @@ describe("bulk_orders_lookup", () => {
     expect(text).toContain('"errors"');
     expect(text).toContain("lookup failed");
   });
+
+  it("query selection set includes pageInfo { hasNextPage } + totalCount (03-REVIEW WR-03)", async () => {
+    // 03-REVIEW WR-03 lockdown: if a future maintainer drops `pageInfo`
+    // or `totalCount` from the BULK_ORDERS_LOOKUP_QUERY selection set,
+    // this assertion trips. Orders Core treats GraphQL query text as
+    // the response contract, so dropping these from the selection
+    // would mean the response no longer carries them — and an agent
+    // pairing this tool with `lookup_orders_ids` (which DOES request
+    // both) would see asymmetric responses and could mistake a
+    // truncation for an empty result.
+    let captured: { query: string } | null = null;
+    server.use(
+      http.post(ORDERS_GRAPH, async ({ request }) => {
+        const body = (await request.json()) as { query: string };
+        captured = { query: body.query };
+        return HttpResponse.json({
+          data: {
+            orders: {
+              edges: [],
+              pageInfo: { hasNextPage: false },
+              totalCount: 0,
+            },
+          },
+        });
+      }),
+    );
+    const mod = await import("../../lib/tools/bulk-orders-lookup");
+    await mod.spec.handler(auth, {
+      client_order_ids: [1],
+      environment: "production",
+    });
+    expect(captured).not.toBeNull();
+    const q = (captured as unknown as { query: string }).query;
+    expect(q).toContain("pageInfo");
+    expect(q).toContain("hasNextPage");
+    expect(q).toContain("totalCount");
+  });
+
+  it("surfaces pageInfo + totalCount in the response (03-REVIEW WR-03)", async () => {
+    server.use(
+      http.post(ORDERS_GRAPH, () =>
+        HttpResponse.json({
+          data: {
+            orders: {
+              edges: [
+                {
+                  node: {
+                    id: "ord_1",
+                    uuid: "uuid-1",
+                    clientOrderID: 12345,
+                    state: "pending",
+                    items: [],
+                  },
+                },
+              ],
+              pageInfo: { hasNextPage: false },
+              totalCount: 1,
+            },
+          },
+        }),
+      ),
+    );
+    const mod = await import("../../lib/tools/bulk-orders-lookup");
+    const result = await mod.spec.handler(auth, {
+      client_order_ids: [12345],
+      environment: "production",
+    });
+    const text = (result.content[0] as { type: "text"; text: string }).text;
+    expect(text).toContain('"totalCount"');
+    expect(text).toContain('"pageInfo"');
+    expect(text).toContain('"hasNextPage"');
+  });
 });
