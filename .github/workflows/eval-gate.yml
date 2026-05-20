@@ -22,6 +22,18 @@ name: Eval Gate
 #     STATIC source-inspection scorers that lock T-02-29 (token omission),
 #     T-02-30 (404-as-null), and T-02-52 (confirm-gate identity) at the CI
 #     layer.
+#   - orders-graphql, orders-history-and-audit, orders-export,
+#     orders-document-upload — Phase-3 family coverage (added 2026-05-20,
+#     plan 03-05). orders-history-and-audit includes the audit-no-bearer
+#     + audit-exception-header-present STATIC scorers that lock the
+#     second-ever auth-exception client (lib/clients/audit.ts).
+#     orders-export includes the binary-envelope-contract +
+#     csv-date-format-pin STATIC scorers — the binary envelope shape
+#     ({ contentType, base64, filenameHint }) will be reused by Phase 5
+#     (PDF labels), Phase 7 (inventory CSV), and Phase 10 (Zoho PDFs).
+#     orders-document-upload includes the no-caller-identity-fields +
+#     guardrails-block-present STATIC scorers that lock BL-04
+#     server-binding + BL-01 canonical guardrails.
 #
 # Required GitHub Actions secrets:
 #   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL
@@ -234,3 +246,99 @@ jobs:
           LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: bun run eval:destructive-integrations
+
+  orders-graphql:
+    name: Eval gate — phase3-orders-graphql (2 tools; Orders Core GraphQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:orders-graphql (tool-name-match >= 0.75, args-overlap >= 0.7, description-quality >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:orders-graphql
+
+  orders-history-and-audit:
+    name: Eval gate — phase3-orders-history-and-audit (2 tools; audit auth-exception locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:orders-history-and-audit (args-overlap >= 0.7, description-quality >= 1.0, audit-no-bearer >= 1.0, audit-exception-header-present >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:orders-history-and-audit
+
+  orders-export:
+    name: Eval gate — phase3-orders-export (1 tool; binary-envelope contract locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:orders-export (tool-name-match >= 0.9, args-overlap >= 0.75, description-quality >= 1.0, binary-envelope-contract >= 1.0, csv-date-format-pin >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:orders-export
+
+  orders-document-upload:
+    name: Eval gate — phase3-orders-document-upload (1 tool; BL-04 server-binding + BL-01 guardrails locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:orders-document-upload (tool-name-match >= 0.9, args-overlap >= 0.7, description-quality >= 1.0, no-caller-identity-fields >= 1.0, guardrails-block-present >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:orders-document-upload
