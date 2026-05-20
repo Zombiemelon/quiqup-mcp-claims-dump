@@ -17,6 +17,7 @@
     "decide_feature_flags_bulk": "enabled",
     "delete_integration_source": "enabled",
     "delete_salla_connection": "enabled",
+    "download_orders_export": "enabled",
     "find_order_by_id_or_barcode": "enabled",
     "get_account": "enabled",
     "get_account_by_id": "enabled",
@@ -89,6 +90,7 @@
     "update_salla_config": "enabled",
     "update_shopify_config": "enabled",
     "update_shopify_connection": "enabled",
+    "upload_order_document": "enabled",
     "upsert_woocommerce_config": "enabled",
     "whoami_platform": "enabled"
   }

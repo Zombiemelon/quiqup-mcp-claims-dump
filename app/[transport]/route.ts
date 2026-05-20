@@ -126,6 +126,10 @@ import { spec as findOrderByIdOrBarcodeSpec } from "@/lib/tools/find-order-by-id
 import { spec as listDepotsSpec } from "@/lib/tools/list-depots";
 import { spec as listMissionsFilterSpec } from "@/lib/tools/list-missions-filter";
 
+// Phase 3 / Wave 4: Orders read path — Ex-core CSV export + Orders Core REST multipart (ORDL-07/ORDS-08).
+import { spec as downloadOrdersExportSpec } from "@/lib/tools/download-orders-export";
+import { spec as uploadOrderDocumentSpec } from "@/lib/tools/upload-order-document";
+
 // Staging-only state-machine helpers (Postman: Quiqup Staging State Change).
 // Each pins `environment: z.literal("staging")` at the input schema, so any
 // non-staging call is rejected by the validator before the handler runs.
@@ -256,6 +260,10 @@ const handler = createMcpHandler(
     registerTool(server, findOrderByIdOrBarcodeSpec);
     registerTool(server, listDepotsSpec);
     registerTool(server, listMissionsFilterSpec);
+
+    // -- Phase 3: Orders read path — Ex-core CSV export + Orders Core REST multipart (ORDL-07/ORDS-08) --
+    registerTool(server, downloadOrdersExportSpec);
+    registerTool(server, uploadOrderDocumentSpec);
 
     // -- Staging-only state-machine helpers (env pinned in the schema) --
     registerTool(server, setOutForDeliveryBatchSpec);
