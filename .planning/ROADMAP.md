@@ -17,7 +17,7 @@ Phase 1 establishes the auth/lookup substrate that everything else depends on. P
 
 - [x] **Phase 1: Account, Auth & Reference Data** — Read-mostly Platform endpoints + Google Places client; establishes the auth/lookup substrate that later phases depend on.
 - [x] **Phase 2: Integrations (Shopify / WooCommerce / Salla)** — External-OAuth-shape Platform endpoints; two DESTRUCTIVE deletes gated by `confirm: true`. Completed 2026-05-19 (6/6 waves).
-- [ ] **Phase 3: Orders — Read Path** — Orders Core GraphQL + Audit + Ex-core CSV export + Quiqup REST history; introduces three new service clients.
+- [x] **Phase 3: Orders — Read Path** — Orders Core GraphQL + Audit + Ex-core CSV export + Quiqup REST history; introduces three new service clients. Completed 2026-05-20 (5/5 waves).
 - [ ] **Phase 4: Orders — Write Path & Lifecycle** — All `batch/set_*` status transitions, mission creation/transfer, and write-side Platform endpoints; every tool DESTRUCTIVE-gated.
 - [ ] **Phase 5: Labels, Slips & PDFs** — Quiqup-GraphQL-host REST client + base64 PDF response pattern shared by later phases (FIN PDFs).
 - [ ] **Phase 6: Inbound completion + Fulfilment gaps** — Three INBD gaps + six PROD gaps; closes the fulfilment receiving + product catalog endpoints.
