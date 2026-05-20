@@ -51,16 +51,30 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     "on_hold_reason, reason, return_to_origin_reason, " +
     "internal_order { id, type, job_id, delivery_failure_reason, mission, origin, destination } | null, " +
     "events }] }`. " +
-    "When to use which: for the STATE-TRANSITION timeline (when did this order go from " +
-    "`pending` → `live` → `delivered`, with which operator and which on-hold reason?), use " +
-    "this tool. For the FIELD-LEVEL audit log (who edited the address, when, before/after " +
-    "diff), use `list_order_audit_events` instead — those are two different upstream services " +
-    "(Quiqup REST vs Audit) with different payload shapes. " +
+    "When to use which: `list_order_audit_events` is the better default for " +
+    "'who did X to this order' — it also captures state-transition events " +
+    "(e.g. `marked_as_ready_for_collection`, `marked_as_cancelled`) with full " +
+    "actor info, lives on a faster no-auth upstream (Audit service), and is " +
+    "more reliable than this endpoint. Reach for `get_order_history` " +
+    "specifically when you need the state-transition-specific metadata that " +
+    "the Audit service does not carry: `on_hold_reason`, " +
+    "`return_to_origin_reason`, `delivery_metrics`, custodian transitions, " +
+    "or the `internal_order` linkage. " +
     "PII warning: Response includes `history[].author.email` for operator actors. " +
     "Audit-log middleware redacts emails at-rest; the agent sees them in the tool result. " +
     "Error modes: 401/403 → run `whoami_platform` to confirm the JWT resolves; " +
     "404 → verify the clientOrderID with `lookup_orders_ids`; " +
-    "5xx → upstream temporarily unavailable, retry in a few seconds. " +
+    "5xx → upstream temporarily unavailable, retry in a few seconds; " +
+    "`fetch failed` with no HTTP status → upstream timeout or transport error. " +
+    "This endpoint is heavier than `get_lastmile_order` (joins state transitions, " +
+    "custodians, delivery_metrics, internal_order) and can exceed the MCP transport " +
+    "timeout, especially on the first call in a session (serverless cold start). " +
+    "Retry at most once with a brief delay; if the second attempt also fails, fall " +
+    "back to `list_order_audit_events` (using the order's `uuid` from " +
+    "`get_lastmile_order`) rather than retrying further — it carries the same " +
+    "actor + state-transition data for cancellation/state-change queries. " +
+    "Only insist on `get_order_history` when you specifically need `on_hold_reason`, " +
+    "`return_to_origin_reason`, `delivery_metrics`, or `internal_order` fields. " +
     'Example: `{ "order_id": "12345", "environment": "production" }`.',
   inputSchema,
   outputSchema,
