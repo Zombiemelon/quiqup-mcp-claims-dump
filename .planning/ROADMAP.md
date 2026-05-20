@@ -81,8 +81,8 @@ Plans:
 **Plans:** 5 plans
 Plans:
 - [x] 03-01-PLAN.md — Orders Core GraphQL client + lookup_orders_ids + bulk_orders_lookup (ORDL-02/03) — Wave 1 — completed 2026-05-19
-- [ ] 03-02-PLAN.md — Quiqup REST history client + Audit client (auth-exception, AUDIT_BASE_URL wiring) + get_order_history + list_order_audit_events (ORDS-02/05) — Wave 2
-- [ ] 03-03-PLAN.md — Platform reads: find_order_by_id_or_barcode + list_depots + list_missions_filter (ORDL-04/05/06) — Wave 3
+- [x] 03-02-PLAN.md — Quiqup REST history client + Audit client (auth-exception, AUDIT_BASE_URL wiring) + get_order_history + list_order_audit_events (ORDS-02/05) — Wave 2 — completed 2026-05-19
+- [x] 03-03-PLAN.md — Platform reads: find_order_by_id_or_barcode + list_depots + list_missions_filter (ORDL-04/05/06) — Wave 3 — completed 2026-05-20
 - [ ] 03-04-PLAN.md — Ex-core CSV export client + Orders Core REST multipart client + download_orders_export + upload_order_document (ORDL-07/ORDS-08) — Wave 4
 - [ ] 03-05-PLAN.md — Langfuse eval coverage for 4 new Phase-3 client families + CI gate updates — Wave 5
 **UI hint**: no
@@ -199,7 +199,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Account, Auth & Reference Data | 4/4 | Plans complete (awaiting gsd-verifier) | 2026-05-19 |
 | 2. Integrations (Shopify / WooCommerce / Salla) | 2/6 | In progress (Waves 1+2 complete) | 2026-05-19 |
-| 3. Orders — Read Path | 0/0 | Not started | - |
+| 3. Orders — Read Path | 3/5 | In progress (Waves 1+2+3 complete) | 2026-05-20 |
 | 4. Orders — Write Path & Lifecycle | 0/0 | Not started | - |
 | 5. Labels, Slips & PDFs | 0/0 | Not started | - |
 | 6. Inbound completion + Fulfilment gaps | 0/0 | Not started | - |

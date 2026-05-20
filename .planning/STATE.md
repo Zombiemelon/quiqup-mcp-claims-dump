@@ -9,22 +9,22 @@
 
 ## Current Position
 
-- **current_phase:** 3 (in progress — Waves 1+2 shipped)
-- **current_plan:** 03-03 (next)
-- **status:** Phase 3 Wave 2 complete (2/5 plans shipped — Quiqup REST + Audit clients landed)
-- **progress:** Phase 3: 2/5 plans complete — Orders Core GraphQL + Quiqup REST + Audit clients live; ORDL-02/03 + ORDS-02/05 tools shipped
+- **current_phase:** 3 (in progress — Waves 1+2+3 shipped)
+- **current_plan:** 03-04 (next)
+- **status:** Phase 3 Wave 3 complete (3/5 plans shipped — Platform-API read tools landed: find_order_by_id_or_barcode + list_depots + list_missions_filter)
+- **progress:** Phase 3: 3/5 plans complete — Orders Core GraphQL + Quiqup REST + Audit clients live; ORDL-02/03 + ORDS-02/05 + ORDL-04/05/06 tools shipped
 
 ```
-[██████              ] 25% (Phase 1 complete + Phase 2 complete + Phase 3 Waves 1+2)
+[███████             ] 28% (Phase 1 complete + Phase 2 complete + Phase 3 Waves 1+2+3)
 ```
 
 ## Performance Metrics
 
 - Phases completed: 2 (Phase 1 + Phase 2)
-- Plans completed: 12 (01-01..01-04, 02-01..02-06, 03-01, 03-02)
-- Requirements shipped (v1): see REQUIREMENTS.md (03-02 adds ORDS-02, ORDS-05 to the shipped set)
-- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2). Phase-3 family evals (Orders Core GraphQL, Quiqup REST, Audit) deferred to plan 03-05 per the canonical Phase-N final-wave eval pattern.
-- New service hosts introduced this wave: 2 (`api.quiqup.com` — public Quiqup REST, distinct from Last-Mile and Platform; `audit.quiqup.com` — Audit service, SECOND auth-exception host after Google Places)
+- Plans completed: 13 (01-01..01-04, 02-01..02-06, 03-01, 03-02, 03-03)
+- Requirements shipped (v1): see REQUIREMENTS.md (03-03 adds ORDL-04, ORDL-05, ORDL-06 to the shipped set)
+- Service-host families with Langfuse eval: 9 (4 Phase-1 + 5 Phase-2). Phase-3 family evals (Orders Core GraphQL, Quiqup REST, Audit, Platform-API reads) deferred to plan 03-05 per the canonical Phase-N final-wave eval pattern.
+- New service hosts introduced this wave: 0 (Wave 3 is a consolidation wave — all three tools reuse the existing Platform-API auth+host plumbing established in Phase 1)
 
 ### Plan Execution Log
 
@@ -42,6 +42,7 @@
 | 02    | 06   | ~25m    | 3     | 17    | 2026-05-19 |
 | 03    | 01   | ~10m    | 3     | 6     | 2026-05-19 |
 | 03    | 02   | ~15m    | 3     | 6     | 2026-05-19 |
+| 03    | 03   | ~3m     | 2     | 5     | 2026-05-20 |
 
 ## Accumulated Context
 
@@ -78,6 +79,10 @@
 - 2026-05-19 (03-01): The Orders Core GraphQL client deliberately reuses `QuiqupHttpError` and the Clerk → Quiqup session-JWT bearer model — NOT the `google-places.ts` API-key auth exception. Orders Core is a first-party Quiqup service; the auth-exception pattern is reserved for the truly-third-party Google host. Locked in by a `grep -c "X-Goog-Api-Key\|api_key\|apiKey" lib/clients/orders-core-graphql.ts` == 0 acceptance check.
 - 2026-05-19 (03-01): `lookup_orders_ids.orderBy.field` is `z.literal("SUBMITTED_AT")` — the Quiqdash frontend hard-codes this; free-string would let an LLM probe undocumented sort fields (threat T-03-04). If Quiqdash extends the enum in future this widens with explicit review.
 - 2026-05-19 (03-01): `bulk_orders_lookup.client_order_ids` cap of 200 matches the upstream `bulkOrdersLookupQuery`'s `first: 200` hard-code. Mirroring the cap at the schema layer rejects over-large requests client-side instead of letting them be silently truncated upstream.
+- 2026-05-20 (03-03): Phase-3 Wave 3 is a consolidation wave — three Platform-API read tools (`find_order_by_id_or_barcode`, `list_depots`, `list_missions_filter`) reuse the existing `getPlatformApiBaseUrl + getQuiqupReadyJwt + Bearer header + QuiqupHttpError` plumbing. NO new service client introduced. Establishes the "Wave-N consolidation lockup" pattern: when a wave introduces only tools and no new infrastructure, the SUMMARY documents the absence as a deliberate decision.
+- 2026-05-20 (03-03): `find_order_by_id_or_barcode.intention` is a free-form `z.string().min(1)` (NOT a `z.enum`) — the upstream BE may add new transitions over time and over-constraining the client would silently break new intentions the moment Quiqup ships them. The description enumerates the observed-set (13 values from `app/hooks/order/use-bulk-change-state.ts`); bad inputs surface via the upstream structured 200-with-error envelope. T-03-19 accept disposition.
+- 2026-05-20 (03-03): `list_depots` translates snake_case `main_depot` (MCP-side input field) → camelCase `mainDepot` (upstream wire-format query key) inside the handler. Booleans serialised via `String(args.main_depot)` to produce the literal `"true"`/`"false"` strings Go BE parses. Tested at both layers: schema-rejection of empty values, MSW assertion that the outbound URL carries `mainDepot=true`. Establishes the "wire-format translation testing" pattern for future tools where MCP-side naming diverges from upstream.
+- 2026-05-20 (03-03): `find_order_by_id_or_barcode` no-match path is a 200 with `error` populated, NOT an HTTP 4xx — handler returns the upstream envelope verbatim (no exception, no `isError` flag). Rationale: the LLM needs to see the error message to route to the next step (e.g. ask the operator for a different ID); raising an exception would lose that information. T-03-20 accept disposition for the full-envelope read.
 
 ### Todos
 
@@ -89,9 +94,9 @@
 
 ## Session Continuity
 
-- **Last session:** 2026-05-19 — completed Plan 03-01 (Phase 3 Wave 1: Orders Core GraphQL client + ORDL-02/03 read tools). Shipped: new `lib/clients/orders-core-graphql.ts` (POST {baseUrl} JSON envelope, Bearer-JWT auth, QuiqupHttpError on HTTP non-2xx, `errors[]` passthrough on 200 partial-success); two new tool specs (`lib/tools/lookup-orders-ids.ts` for the `ordersListingIdsQuery` "ids only" companion query, `lib/tools/bulk-orders-lookup.ts` for the `bulkOrdersLookupQuery` items+weights re-fetch). MSW client tests (6) cover POST envelope shape, partial-success passthrough, HTTP-error mapping, both env-var overrides, and the staging cluster route. Tool tests (13) cover happy path, variables-envelope forwarding, errors[] surfacing, schema-rejection edge cases (page-size cap 500, ids-array cap 200, orderBy literal lock), missing-auth.userId, and HTTP 401 → QuiqupHttpError. `app/[transport]/route.ts` registers both specs under a Phase-3 comment block; `evals/snapshots/tool-surface.json` records both as `enabled` (86 total tools). Full suite: 527 passed, 3 skipped, 0 regressions. EVAL_GATE=1 bun run eval:tool-surface exits 0.
-- **Next session:** `/gsd:execute-phase 3` continues with Plan 03-02 (Quiqup REST history client + Audit client + get_order_history + list_order_audit_events — ORDS-02/05).
+- **Last session:** 2026-05-20 — completed Plan 03-03 (Phase 3 Wave 3: Platform-API read tools — find_order_by_id_or_barcode + list_depots + list_missions_filter — ORDL-04/05/06). Shipped: three new tool spec modules (`lib/tools/find-order-by-id-or-barcode.ts`, `lib/tools/list-depots.ts`, `lib/tools/list-missions-filter.ts`), all reusing the existing Platform-API plumbing (no new service client). 15-test MSW Vitest suite at `tests/tools/orders-platform-reads.test.ts` locks in URL-query forwarding (T-03-18 hygiene + snake_case → camelCase wire-translation for `main_depot` → `mainDepot`), schema-rejection of empty required strings, the unauthenticated-caller refusal (T-03-17), the 401 → QuiqupHttpError mapping, and the 200-with-error envelope contract on find_order_by_id_or_barcode (no exception, no isError flag). `app/[transport]/route.ts` registers all three under a Phase-3 Wave-3 comment block; `evals/snapshots/tool-surface.json` records all three as `enabled` (91 total tools). Full suite: 559 passed, 3 skipped, 0 regressions. `EVAL_GATE=1 bun run eval:tool-surface` exits 0. Commits: `05d2327` (Task 1 — tool specs) and `e28ff04` (Task 2 — tests + registration + snapshot bump).
+- **Next session:** `/gsd:execute-phase 3` continues with Plan 03-04 (next Phase-3 wave per ROADMAP.md).
 
 ---
 *State initialized: 2026-05-19*
-*Last updated: 2026-05-19 (post 03-01 execution — Phase 3 Wave 1 complete; Orders Core GraphQL client + ORDL-02/03 tools live)*
+*Last updated: 2026-05-20 (post 03-03 execution — Phase 3 Wave 3 complete; Platform-API read tools ORDL-04/05/06 live)*
