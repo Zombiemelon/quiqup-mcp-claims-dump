@@ -32,7 +32,26 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@v1
+      # The action refuses to review a PR that modifies its own workflow file
+      # (security: a PR shouldn't be able to disarm its own reviewer). When that
+      # happens, the action exits 1 with "Workflow validation failed". Detect
+      # the case ourselves and skip the action step so CI stays green — those
+      # PRs are reviewed manually anyway.
+      - name: Detect self-modification of review workflow
+        id: self_check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --paginate --jq '.[].filename' \
+              | grep -qx '.github/workflows/claude-review.yml'; then
+            echo "self_modified=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::PR modifies .github/workflows/claude-review.yml — skipping Claude review (action refuses to run on PRs that edit it)."
+          else
+            echo "self_modified=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.self_check.outputs.self_modified != 'true'
+        uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
