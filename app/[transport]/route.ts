@@ -137,6 +137,19 @@ import { spec as setOutForDeliveryBatchSpec } from "@/lib/tools/set-out-for-deli
 import { spec as setCollectionFailedBatchSpec } from "@/lib/tools/set-collection-failed-batch";
 import { spec as setDeliveryFailedBatchSpec } from "@/lib/tools/set-delivery-failed-batch";
 
+// -- Phase 4: Wave 1 — Forward-path batch transitions (ORDT-03..08) --
+// All six tools are thin per-file wrappers around `defineBatchTransition`
+// (lib/tools/_batch-transition-factory.ts). The destructive gate, dry-run
+// shape, sequential per-id scope assertion, and guardrails block are
+// owned by the factory — see decision D-01 in
+// .planning/phases/04-orders-write-path-lifecycle/04-CONTEXT.md.
+import { spec as setCollectedSpec } from "@/lib/tools/set-collected";
+import { spec as setReceivedAtDepotSpec } from "@/lib/tools/set-received-at-depot";
+import { spec as setAtDepotSpec } from "@/lib/tools/set-at-depot";
+import { spec as setInTransitSpec } from "@/lib/tools/set-in-transit";
+import { spec as setScheduledSpec } from "@/lib/tools/set-scheduled";
+import { spec as setDeliveryCompleteSpec } from "@/lib/tools/set-delivery-complete";
+
 // Vercel/Next serverless function timeout (mcp-handler README's documented
 // ceiling on Hobby; higher available on Pro). The default of 10s is shorter
 // than the heavier `/orders/{id}/history` cold-path; bumping to 60s gives
@@ -277,6 +290,14 @@ const handler = createMcpHandler(
     registerTool(server, setOutForDeliveryBatchSpec);
     registerTool(server, setCollectionFailedBatchSpec);
     registerTool(server, setDeliveryFailedBatchSpec);
+
+    // -- Phase 4: Wave 1 — Forward-path batch transitions (ORDT-03..08) — confirm:true gated via factory --
+    registerTool(server, setCollectedSpec);
+    registerTool(server, setReceivedAtDepotSpec);
+    registerTool(server, setAtDepotSpec);
+    registerTool(server, setInTransitSpec);
+    registerTool(server, setScheduledSpec);
+    registerTool(server, setDeliveryCompleteSpec);
   },
   {
     // SEP-973 `icons` on `Implementation` — Claude.ai's connector UI renders
