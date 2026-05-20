@@ -1,7 +1,7 @@
 /**
  * Scorers for the Phase-3 Ex-core family eval (orders-export-v1).
  *
- * Six scorers feed Langfuse traces:
+ * Seven scorers feed Langfuse traces:
  *
  *   1. tool-name-match (0/1)            — wrapped from ./score-tool-call.ts.
  *
@@ -33,6 +33,15 @@
  *      in the source. Locks the date-format invariant per the WR-02
  *      lesson — if someone "modernizes" the date field to full
  *      ISO-8601, this scorer trips.
+ *
+ *   7. binary-envelope-block-type (0/1) — STATIC source-inspection (added
+ *      for 03-REVIEW WR-04); readFile()s `lib/tools/download-orders-export.ts`
+ *      and asserts the binary envelope is returned inside a `type: "resource"`
+ *      content block — NOT a `type: "text"` block. Re-introducing the
+ *      `text`-block shape would re-trigger the 2026-05-14 widening
+ *      rationale on `register.ts:108` (megabytes of base64 forcing
+ *      LLM clients into bash-heredoc gymnastics). Phase 5 (PDFs), Phase 7
+ *      (CSV), and Phase 10 (Zoho PDFs) all inherit this contract.
  *
  * Lenient by design on tool-name + args; STRICT on the binary-envelope
  * + date-format invariants.
@@ -246,6 +255,58 @@ export const csvDateFormatPin: Evaluator = async () => {
   };
 };
 
+/**
+ * STATIC source-inspection: binary-envelope-block-type (03-REVIEW WR-04).
+ *
+ * Reads lib/tools/download-orders-export.ts and asserts the binary
+ * envelope is returned inside a `type: "resource"` content block — NOT
+ * a `type: "text"` block. The text-block shape was the historical
+ * regression (a CSV export can easily be megabytes; squeezing megabytes
+ * of base64 through a `text` block forces LLM clients into bash-heredoc
+ * gymnastics to decode bytes that should have flowed as a `resource`
+ * block to begin with — see lib/tools/register.ts:108 widening note
+ * from 2026-05-14).
+ *
+ * We look for the exact substring `type: "resource"` inside the source
+ * file. If a future refactor switches to single quotes or reorders the
+ * key, the assertion can be widened — but the canonical project style
+ * is `type: "resource" as const` so the substring is the simplest
+ * line-of-defence.
+ *
+ * Phase 5 (PDFs), Phase 7 (CSV), Phase 10 (Zoho PDFs) all inherit this
+ * contract: any tool that returns the `{ contentType, base64, filenameHint }`
+ * envelope MUST emit a `resource` block.
+ */
+const RESOURCE_BLOCK_MARKER = 'type: "resource"';
+
+export const binaryEnvelopeBlockType: Evaluator = async () => {
+  const { readFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+
+  let raw: string;
+  try {
+    raw = await readFile(
+      path.resolve(process.cwd(), ORDERS_EXPORT_SOURCE_PATH),
+      "utf-8",
+    );
+  } catch (err) {
+    return {
+      name: "binary-envelope-block-type",
+      value: 0.0,
+      comment: `read failed for ${ORDERS_EXPORT_SOURCE_PATH}: ${(err as Error).message}`,
+    };
+  }
+
+  const hasResourceBlock = raw.includes(RESOURCE_BLOCK_MARKER);
+  return {
+    name: "binary-envelope-block-type",
+    value: hasResourceBlock ? 1.0 : 0.0,
+    comment: hasResourceBlock
+      ? `${ORDERS_EXPORT_SOURCE_PATH} returns the binary envelope inside a resource block — WR-04 contract held; Phase 5/7/10 will inherit the right shape`
+      : `${ORDERS_EXPORT_SOURCE_PATH} no longer emits a \`type: "resource"\` content block — the binary envelope may have regressed to a text block (03-REVIEW WR-04). Decoding megabytes of base64 out of a text block forces LLM clients into bash-heredoc gymnastics; see lib/tools/register.ts:108`,
+  };
+};
+
 export const evaluators = [
   toolNameMatch,
   requiredFieldsPresent,
@@ -253,4 +314,5 @@ export const evaluators = [
   descriptionQuality,
   binaryEnvelopeContract,
   csvDateFormatPin,
+  binaryEnvelopeBlockType,
 ];

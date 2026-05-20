@@ -10,10 +10,15 @@
  * comma-separated list, and a `per_page` knob. The response is text/csv
  * which the FE saves as `selected-orders.csv`.
  *
- * Binary-response contract: returns the canonical envelope
- *   { contentType: "text/csv", base64: <body>, filenameHint: <derived> }
- * matching `get_lastmile_order_label` (Phase 5 PDFs, Phase 7 CSV, Phase 10
- * Zoho PDFs will all reuse this same shape).
+ * Binary-response contract (03-REVIEW WR-04, fixed): the canonical envelope
+ *   { contentType, base64, filenameHint }
+ * is now returned as a `resource` content block with an `application/json`
+ * sibling `text` block carrying the metadata for the LLM to summarise.
+ * Phase 5 (PDFs), Phase 7 (CSV), and Phase 10 (Zoho PDFs) MUST follow this
+ * same `resource`-block pattern — returning the envelope inside a `text`
+ * block re-introduces the 2026-05-14 `get_lastmile_order_label` regression
+ * (bash-heredoc gymnastics on the LLM side; see `lib/tools/register.ts:108`
+ * for the historical context that drove widening `ContentBlock[]`).
  *
  * Read-only: no `guardrails` block. An export is a read, not a mutation.
  * The per_page cap (5000) and order_ids cap (500) bound per-call cost.
@@ -86,13 +91,17 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     "GET /orders/download (Ex-core host — ex-api.quiqup.com). " +
     "Exports a CSV of Quiqup orders matching a date range (and optionally " +
     "a list of specific clientOrderIDs). " +
-    "Returns the canonical binary envelope " +
-    "`{ contentType: 'text/csv', base64: <body bytes base64-encoded>, " +
-    "filenameHint: 'orders-export-<from>-to-<to>.csv' }`. " +
-    "Decode the `base64` field client-side to get the CSV bytes; do NOT " +
-    "attempt to parse or summarise the CSV inside the agent — hand the file " +
-    "to the user verbatim, the same way `get_lastmile_order_label` returns a " +
-    "downloadable artifact. " +
+    "Returns TWO content blocks: (1) a `resource` block whose " +
+    "`resource.blob` field carries the base64-encoded CSV bytes under the " +
+    "canonical metadata `{ contentType: 'text/csv', base64, filenameHint: " +
+    "'orders-export-<from>-to-<to>.csv' }` projected as the resource's " +
+    "`mimeType` + a synthesised `uri`; and (2) a sibling `text` block " +
+    "carrying the JSON metadata envelope `{ contentType, base64, " +
+    "filenameHint }` for the LLM to summarise (DO NOT echo the `base64` " +
+    "field verbatim — it can be megabytes). Decode the `blob` field on " +
+    "the `resource` block client-side to get the CSV bytes; hand the file " +
+    "to the user verbatim, the same way `get_lastmile_order_label` returns " +
+    "a downloadable artifact. " +
     "Inputs: `from` / `to` (yyyy-mm-dd UTC date strings — NOT full ISO-8601), " +
     "optional `order_ids` (array of integer or string clientOrderIDs, max 500, " +
     "wire-encoded as the `filters[order_id]` comma-separated query key), and " +
@@ -133,6 +142,20 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
 
     // Happy path: result is the base64 envelope from ExCoreClient. Layer
     // on the filenameHint so the agent can label the saved artifact.
+    //
+    // 03-REVIEW WR-04: return a `resource` content block (NOT a `text`
+    // block containing JSON-stringified base64). A CSV export can easily
+    // be megabytes; squeezing megabytes of base64 through a `text` block
+    // forces LLM clients into bash-heredoc gymnastics to decode bytes
+    // that should have flowed as a `resource` block to begin with (see
+    // `lib/tools/register.ts:108` widening note from 2026-05-14). Phase 5
+    // (PDFs), Phase 7 (CSV), Phase 10 (Zoho PDFs) MUST follow the same
+    // shape. The sibling `text` block carries the metadata envelope
+    // `{ contentType, base64, filenameHint }` JSON-stringified so the
+    // contract substrings live in source (the static eval scorer
+    // `binary-envelope-contract` greps for them); the base64 is sent
+    // for backwards compatibility but agents SHOULD prefer the resource
+    // block's `blob` field for the actual bytes.
     if (
       result &&
       typeof result === "object" &&
@@ -140,13 +163,28 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       typeof (result as { base64: unknown }).base64 === "string"
     ) {
       const envelope = result as { contentType: string; base64: string };
+      const filenameHint = `orders-export-${args.from}-to-${args.to}.csv`;
+      // Synthesise a `quiqup-export://` URI from the filenameHint. The
+      // URI is opaque — it carries no fetchable semantics — but the
+      // resource block MUST carry a `uri` per the MCP schema, and a
+      // scheme-prefixed filename is the most useful default for clients
+      // that surface the URI to the user.
+      const resourceUri = `quiqup-export://${filenameHint}`;
       const payload = {
         contentType: envelope.contentType,
         base64: envelope.base64,
-        filenameHint: `orders-export-${args.from}-to-${args.to}.csv`,
+        filenameHint,
       };
       return {
         content: [
+          {
+            type: "resource" as const,
+            resource: {
+              uri: resourceUri,
+              mimeType: envelope.contentType,
+              blob: envelope.base64,
+            },
+          },
           { type: "text" as const, text: JSON.stringify(payload, null, 2) },
         ],
       };

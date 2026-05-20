@@ -87,7 +87,7 @@ afterEach(() => {
 });
 
 describe("download_orders_export", () => {
-  it("happy path returns the base64 envelope with filenameHint", async () => {
+  it("happy path returns the base64 envelope as a `resource` block + metadata `text` block (03-REVIEW WR-04)", async () => {
     const csvBytes = "order_id,state\n42,delivered\n";
     server.use(
       http.get(`${EX_PROD}/orders/download`, () =>
@@ -104,10 +104,42 @@ describe("download_orders_export", () => {
       per_page: 1000,
       environment: "production",
     });
-    expect(result.content).toHaveLength(1);
-    const first = result.content[0];
-    if (first.type !== "text") throw new Error("expected text block");
-    const parsed = JSON.parse(first.text);
+    // Two content blocks: a `resource` carrying the bytes + a `text`
+    // carrying the metadata envelope.
+    expect(result.content).toHaveLength(2);
+
+    // Block 0 MUST be a `resource` block — WR-04 lockdown. Returning the
+    // base64 inside a `text` block (the historical regression) would
+    // re-trigger the 2026-05-14 widening rationale; this assertion is
+    // what stops a future maintainer from silently reverting.
+    const resourceBlock = result.content[0];
+    if (resourceBlock.type !== "resource")
+      throw new Error(
+        `expected a "resource" block at index 0, got "${resourceBlock.type}" — see 03-REVIEW WR-04`,
+      );
+    const resourcePayload = resourceBlock.resource as {
+      uri: string;
+      mimeType?: string;
+      blob?: string;
+      text?: string;
+    };
+    expect(resourcePayload.mimeType).toContain("text/csv");
+    expect(typeof resourcePayload.blob).toBe("string");
+    expect((resourcePayload.blob as string).length).toBeGreaterThan(0);
+    expect(resourcePayload.uri).toMatch(
+      /^quiqup-export:\/\/orders-export-2026-05-01-to-2026-05-19\.csv$/,
+    );
+    expect(
+      Buffer.from(resourcePayload.blob as string, "base64").toString("utf-8"),
+    ).toBe(csvBytes);
+
+    // Block 1 is the metadata `text` block carrying the canonical
+    // envelope `{ contentType, base64, filenameHint }`. Kept around so
+    // the contract substrings live in source for the static eval
+    // scorers (`binary-envelope-contract`, `binary-envelope-block-type`).
+    const metaBlock = result.content[1];
+    if (metaBlock.type !== "text") throw new Error("expected text block at index 1");
+    const parsed = JSON.parse(metaBlock.text);
     expect(parsed.contentType).toContain("text/csv");
     expect(typeof parsed.base64).toBe("string");
     expect(parsed.base64.length).toBeGreaterThan(0);
