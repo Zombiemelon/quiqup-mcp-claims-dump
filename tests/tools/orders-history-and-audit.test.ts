@@ -204,6 +204,57 @@ describe("get_order_history", () => {
     expect(thrown).toBeInstanceOf(QuiqupHttpError);
     expect((thrown as QuiqupHttpError).status).toBe(401);
   });
+
+  it("stalled upstream surfaces as TimeoutError (AbortSignal.timeout discipline)", async () => {
+    // Asserts that when AbortSignal.timeout() fires under a stalled
+    // upstream, the resulting `TimeoutError` propagates verbatim through
+    // QuiqupRestClient.request -> tool handler -> caller — i.e., callers
+    // see a labelled, agent-actionable error instead of the bare
+    // "fetch failed" symptom from the previous session.
+    //
+    // We assert the propagation pathway directly: stub `fetch` to reject
+    // synchronously with the exact error shape `AbortSignal.timeout()`
+    // produces at runtime (a DOMException-like object with
+    // name === "TimeoutError"). This is robust against vitest's fake-timer
+    // semantics, which do NOT mock the internal Node timer that
+    // `AbortSignal.timeout()` uses — using real timers here would force a
+    // 25s wall-clock wait per run.
+    //
+    // The plan permits this alternative ("mock `fetch` directly ... assert
+    // the same TimeoutError name").
+    const originalFetch = globalThis.fetch;
+    let observedSignal: AbortSignal | undefined;
+    const fetchSpy = vi.fn((_url: string, init?: RequestInit) => {
+      observedSignal = init?.signal ?? undefined;
+      const err = Object.assign(new Error("The operation was aborted due to timeout"), {
+        name: "TimeoutError",
+      });
+      return Promise.reject(err);
+    });
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+    try {
+      const mod = await import("../../lib/tools/get-order-history");
+      let thrown: unknown = null;
+      try {
+        await mod.spec.handler(auth, {
+          order_id: "12345",
+          environment: "production",
+        });
+      } catch (err) {
+        thrown = err;
+      }
+      // 1) The client actually wired an AbortSignal — guards against a
+      //    regression where the signal: option is dropped from request().
+      expect(observedSignal).toBeInstanceOf(AbortSignal);
+      // 2) The labelled TimeoutError propagates verbatim (no rewrap to
+      //    QuiqupHttpError, no swallow, no "fetch failed").
+      expect(thrown).not.toBeNull();
+      expect((thrown as { name?: string }).name).toBe("TimeoutError");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
 
 describe("list_order_audit_events", () => {
