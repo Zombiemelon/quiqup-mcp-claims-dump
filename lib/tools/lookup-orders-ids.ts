@@ -188,6 +188,19 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       throw new Error("lookup_orders_ids requires an authenticated user");
     }
 
+    // Enforce the mutual-exclusivity advertised in the input schema's
+    // describe text: callers must not combine forward (first/after) and
+    // backward (last/before) pagination in the same request. Upstream
+    // GraphQL rejects this anyway, but failing fast here avoids the
+    // network round-trip and produces a clearer error.
+    const forward = args.first !== undefined || args.after !== undefined;
+    const backward = args.last !== undefined || args.before !== undefined;
+    if (forward && backward) {
+      throw new Error(
+        "lookup_orders_ids: cursor modes are mutually exclusive — pass `first`/`after` for forward pagination OR `last`/`before` for backward, not both.",
+      );
+    }
+
     const jwt = await getQuiqupReadyJwt(auth.userId);
     const client = new OrdersCoreGraphQLClient({
       jwt,

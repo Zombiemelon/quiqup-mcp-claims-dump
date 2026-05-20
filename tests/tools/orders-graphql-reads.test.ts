@@ -207,6 +207,28 @@ describe("lookup_orders_ids", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("rejects mixing forward and backward cursor modes (first+before)", async () => {
+    const mod = await import("../../lib/tools/lookup-orders-ids");
+    await expect(
+      mod.spec.handler(auth, {
+        first: 10,
+        before: "cursor-x",
+        environment: "production",
+      }),
+    ).rejects.toThrow(/mutually exclusive/);
+  });
+
+  it("rejects mixing forward and backward cursor modes (last+after)", async () => {
+    const mod = await import("../../lib/tools/lookup-orders-ids");
+    await expect(
+      mod.spec.handler(auth, {
+        last: 10,
+        after: "cursor-x",
+        environment: "production",
+      }),
+    ).rejects.toThrow(/mutually exclusive/);
+  });
+
   it("rejects orderBy.field other than SUBMITTED_AT (literal locked)", async () => {
     const mod = await import("../../lib/tools/lookup-orders-ids");
     const parsed = mod.spec.inputSchema.safeParse({
