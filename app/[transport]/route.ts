@@ -136,6 +136,7 @@ import { spec as uploadOrderDocumentSpec } from "@/lib/tools/upload-order-docume
 import { spec as setOutForDeliveryBatchSpec } from "@/lib/tools/set-out-for-delivery-batch";
 import { spec as setCollectionFailedBatchSpec } from "@/lib/tools/set-collection-failed-batch";
 import { spec as setDeliveryFailedBatchSpec } from "@/lib/tools/set-delivery-failed-batch";
+import { spec as setDeliveryCompleteBatchSpec } from "@/lib/tools/set-delivery-complete-batch";
 
 // Vercel/Next serverless function timeout (mcp-handler README's documented
 // ceiling on Hobby; higher available on Pro). The default of 10s is shorter
@@ -277,6 +278,7 @@ const handler = createMcpHandler(
     registerTool(server, setOutForDeliveryBatchSpec);
     registerTool(server, setCollectionFailedBatchSpec);
     registerTool(server, setDeliveryFailedBatchSpec);
+    registerTool(server, setDeliveryCompleteBatchSpec);
   },
   {
     // SEP-973 `icons` on `Implementation` — Claude.ai's connector UI renders
