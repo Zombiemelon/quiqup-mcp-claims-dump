@@ -98,10 +98,20 @@ export const argsOverlap: Evaluator = async ({ output, expectedOutput }) => {
   const a = (output as { args?: unknown } | undefined)?.args ?? {};
   const e = (expectedOutput as { args?: unknown } | undefined)?.args ?? {};
   const { matched, total } = overlap(e, a);
+  // When the dataset specifies no expected args (total === 0), the tool
+  // truly requires no arguments — a correct empty call IS a perfect match.
+  // Returning 0 here would deterministically tank the average for any
+  // family whose canonical tools have empty/default args (e.g. `list_*`
+  // tools), as observed in get-account (4/7) and woocommerce-integration
+  // (2/7) where the args-overlap score was capped below threshold by
+  // construction, regardless of LLM behavior.
   return {
     name: "args-overlap",
-    value: total > 0 ? matched / total : 0,
-    comment: `${matched}/${total} leaf matches`,
+    value: total > 0 ? matched / total : 1,
+    comment:
+      total > 0
+        ? `${matched}/${total} leaf matches`
+        : "no required args — empty call accepted as perfect match",
   };
 };
 
