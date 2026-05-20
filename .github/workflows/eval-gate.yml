@@ -46,6 +46,8 @@ on:
     paths:
       - "lib/tools/**"
       - "lib/clients/**"
+      - "lib/middleware/**"
+      - "app/[transport]/**"
       - "evals/**"
       - "package.json"
       - "bun.lock"
