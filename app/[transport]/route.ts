@@ -137,6 +137,14 @@ import { spec as setOutForDeliveryBatchSpec } from "@/lib/tools/set-out-for-deli
 import { spec as setCollectionFailedBatchSpec } from "@/lib/tools/set-collection-failed-batch";
 import { spec as setDeliveryFailedBatchSpec } from "@/lib/tools/set-delivery-failed-batch";
 
+// Vercel/Next serverless function timeout (mcp-handler README's documented
+// ceiling on Hobby; higher available on Pro). The default of 10s is shorter
+// than the heavier `/orders/{id}/history` cold-path; bumping to 60s gives
+// the 25s-bounded upstream call plus inbound Clerk verification + outbound
+// session-JWT mint comfortable headroom and removes the route-level timeout
+// as a hidden suspect for opaque "fetch failed" symptoms.
+export const maxDuration = 60;
+
 const handler = createMcpHandler(
   (server) => {
     // -- Legacy tools (own register*() functions per M1 audit) --

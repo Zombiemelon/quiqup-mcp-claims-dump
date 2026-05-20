@@ -30,7 +30,11 @@
  * `quiqup-lastmile.ts`) carrying status + raw body. The single shared
  * error type lets the `registerTool` wrapper produce the same MCP
  * `isError: true` envelope regardless of which Quiqup host the failure
- * came from.
+ * came from. Each outbound `fetch()` is bounded by a 25s
+ * `AbortSignal.timeout(25_000)` so a stalled upstream surfaces as a
+ * labelled `TimeoutError` (agent-actionable) instead of an opaque
+ * `fetch failed`; 25s sits below the route-level `maxDuration = 60`
+ * declared in `app/[transport]/route.ts`.
  *
  * Response shape: JSON content-type returns the parsed JSON body;
  * non-JSON content-types (CSV / PDF — e.g. `/orders/export/{id}` will
@@ -117,6 +121,7 @@ export class QuiqupRestClient {
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
       },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      signal: AbortSignal.timeout(25_000),
     });
     if (!res.ok) {
       throw new QuiqupHttpError(res.status, await res.text());
