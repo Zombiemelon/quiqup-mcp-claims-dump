@@ -19,8 +19,8 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
-import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
-import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
+import { environmentField } from "@/lib/clients/quiqup-env";
+import { PlatformApiClient } from "@/lib/clients/platform-api";
 
 const inputSchema = z.object({
   value: z
@@ -58,25 +58,12 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     }
 
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const platformApiBase = getPlatformApiBaseUrl(args.environment);
-
-    const url = new URL(`${platformApiBase}/quiqdash/missions`);
-    const params = new URLSearchParams({ value: args.value });
-    url.search = params.toString();
-
-    const res = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-        Accept: "application/json",
-      },
+    // 03-REVIEW WR-01: migrated from inline fetch boilerplate to the
+    // PlatformApiClient helper (see lib/clients/platform-api.ts).
+    const client = new PlatformApiClient({ jwt, environment: args.environment });
+    const data = await client.request("GET", "/quiqdash/missions", {
+      query: { value: args.value },
     });
-
-    if (!res.ok) {
-      throw new QuiqupHttpError(res.status, await res.text());
-    }
-
-    const data = await res.json();
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };

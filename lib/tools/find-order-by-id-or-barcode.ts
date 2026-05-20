@@ -35,8 +35,8 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
-import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
-import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
+import { environmentField } from "@/lib/clients/quiqup-env";
+import { PlatformApiClient } from "@/lib/clients/platform-api";
 
 const inputSchema = z.object({
   value: z
@@ -102,28 +102,23 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     }
 
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const platformApiBase = getPlatformApiBaseUrl(args.environment);
+    // 03-REVIEW WR-01: migrated from inline fetch boilerplate to the
+    // PlatformApiClient helper. The helper handles base-URL resolution,
+    // URLSearchParams hygiene, Bearer + Accept headers, and the
+    // QuiqupHttpError mapping in one place — see
+    // lib/clients/platform-api.ts header for the rationale.
+    const client = new PlatformApiClient({ jwt, environment: args.environment });
 
-    const url = new URL(`${platformApiBase}/quiqdash/orders/find_by_id_or_barcode`);
-    const params = new URLSearchParams({
-      value: args.value,
-      intention: args.intention,
-    });
-    url.search = params.toString();
-
-    const res = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-        Accept: "application/json",
+    const data = await client.request(
+      "GET",
+      "/quiqdash/orders/find_by_id_or_barcode",
+      {
+        query: {
+          value: args.value,
+          intention: args.intention,
+        },
       },
-    });
-
-    if (!res.ok) {
-      throw new QuiqupHttpError(res.status, await res.text());
-    }
-
-    const data = await res.json();
+    );
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };

@@ -26,8 +26,8 @@
 import { z } from "zod";
 import type { ToolSpec } from "./register";
 import { getQuiqupReadyJwt } from "@/lib/quiqup";
-import { QuiqupHttpError } from "@/lib/clients/quiqup-lastmile";
-import { environmentField, getPlatformApiBaseUrl } from "@/lib/clients/quiqup-env";
+import { environmentField } from "@/lib/clients/quiqup-env";
+import { PlatformApiClient } from "@/lib/clients/platform-api";
 
 const inputSchema = z.object({
   region: z
@@ -75,31 +75,20 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     }
 
     const jwt = await getQuiqupReadyJwt(auth.userId);
-    const platformApiBase = getPlatformApiBaseUrl(args.environment);
-
-    const url = new URL(`${platformApiBase}/quiqdash/depots`);
-    // NOTE the snake_case → camelCase wire translation. The MCP-side schema
-    // uses `main_depot` (matching the rest of the surface); the upstream wants
-    // `mainDepot`. Boolean → "true"/"false" string for Go's bool parser.
-    const params = new URLSearchParams({
-      region: args.region,
-      mainDepot: String(args.main_depot),
-    });
-    url.search = params.toString();
-
-    const res = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-        Accept: "application/json",
+    // 03-REVIEW WR-01: migrated from inline fetch boilerplate to the
+    // PlatformApiClient helper (see lib/clients/platform-api.ts).
+    //
+    // NOTE the snake_case → camelCase wire translation. The MCP-side
+    // schema uses `main_depot` (matching the rest of the surface); the
+    // upstream wants `mainDepot`. Boolean → "true"/"false" string is
+    // handled by the helper's `String(v)` coercion for Go's bool parser.
+    const client = new PlatformApiClient({ jwt, environment: args.environment });
+    const data = await client.request("GET", "/quiqdash/depots", {
+      query: {
+        region: args.region,
+        mainDepot: args.main_depot,
       },
     });
-
-    if (!res.ok) {
-      throw new QuiqupHttpError(res.status, await res.text());
-    }
-
-    const data = await res.json();
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };
