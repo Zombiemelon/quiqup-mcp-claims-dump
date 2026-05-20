@@ -60,7 +60,10 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
     "confirms the exchanged session-JWT works against the platform API and " +
     "tells you which region/role context the request will execute under. " +
     "Pairs with `claims_dump` (which shows the *inbound* OAuth token, " +
-    "before the same-IdP exchange).",
+    "before the same-IdP exchange). " +
+    "Note: `whoami_platform` is the auth-triage tool against /me; use " +
+    "`get_account` to read the partner's account profile (different " +
+    "endpoint, different payload).",
   inputSchema,
   outputSchema,
   handler: async (auth, args) => {

@@ -83,3 +83,33 @@ export function getPlatformApiBaseUrl(env: QuiqupEnvironment = "production"): st
 export function isQuiqupEnvironment(v: unknown): v is QuiqupEnvironment {
   return v === "production" || v === "staging";
 }
+
+/**
+ * Canonical integration-source enum (Shopify, WooCommerce, Salla).
+ *
+ * Shared so the read side (`list_integration_connections[].source` doc) and
+ * the write/delete side (`delete_integration_source.source`,
+ * `repair_integration_orders.source`) move together. Adding a fourth family
+ * (Magento, BigCommerce, etc.) is a one-line change here — drift between the
+ * read shape and the delete/repair schemas can no longer happen silently
+ * (02-REVIEW WR-05).
+ */
+export const INTEGRATION_SOURCES = ["shopify", "woocommerce", "salla"] as const;
+export type IntegrationSource = (typeof INTEGRATION_SOURCES)[number];
+export const integrationSourceField = z.enum(INTEGRATION_SOURCES);
+
+/**
+ * ISO-3166 alpha-2 country code: exactly two uppercase ASCII letters.
+ *
+ * Replaces the per-tool `z.string().length(2)` shape that admitted `"12"`,
+ * `"  "`, `"\n\n"`, lowercase, etc. (02-REVIEW WR-01 — same pattern as
+ * Phase-1 BL-02). Use this anywhere the upstream expects an ISO-3166
+ * alpha-2 country code (`country_filter[]` on Salla / WooCommerce config,
+ * future address country fields).
+ */
+export const iso3166Alpha2 = z
+  .string()
+  .regex(
+    /^[A-Z]{2}$/,
+    "must be ISO-3166 alpha-2: two uppercase ASCII letters, e.g. AE, SA",
+  );

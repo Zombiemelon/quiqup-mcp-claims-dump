@@ -1,0 +1,346 @@
+name: Eval Gate
+
+# Phase-1 onwards "Langfuse eval per service-host family" gate. Runs the
+# offline-tool-call evals plus the description-quality + surface-snapshot
+# scorers with EVAL_GATE=1 set, so a regression fails the build.
+#
+# Distinct from .github/workflows/evals.yml — that file is the original
+# lastmile-order-creation eval (v1-offline + v3-roundtrip with staging side
+# effects). This file is the per-family gate that grew out of Phase 1's
+# "every service-host family ships with at least one Langfuse eval"
+# invariant; it currently covers:
+#
+#   - tool-surface       — snapshot diff of the registered tool set vs
+#                          evals/snapshots/tool-surface.json. Cheap; runs
+#                          on every PR.
+#   - get-account        — Phase-1 Platform-read family (added 2026-05-19).
+#   - lookup-google-place — Google Places family (added 2026-05-19; first
+#                          eval for this brand-new service host).
+#   - integrations-shared, shopify-integration, woocommerce-integration,
+#     salla-integration, destructive-integrations — Phase-2 family coverage
+#     (added 2026-05-19, plan 02-06). Salla and destructive evals include
+#     STATIC source-inspection scorers that lock T-02-29 (token omission),
+#     T-02-30 (404-as-null), and T-02-52 (confirm-gate identity) at the CI
+#     layer.
+#   - orders-graphql, orders-history-and-audit, orders-export,
+#     orders-document-upload — Phase-3 family coverage (added 2026-05-20,
+#     plan 03-05). orders-history-and-audit includes the audit-no-bearer
+#     + audit-exception-header-present STATIC scorers that lock the
+#     second-ever auth-exception client (lib/clients/audit.ts).
+#     orders-export includes the binary-envelope-contract +
+#     csv-date-format-pin STATIC scorers — the binary envelope shape
+#     ({ contentType, base64, filenameHint }) will be reused by Phase 5
+#     (PDF labels), Phase 7 (inventory CSV), and Phase 10 (Zoho PDFs).
+#     orders-document-upload includes the no-caller-identity-fields +
+#     guardrails-block-present STATIC scorers that lock BL-04
+#     server-binding + BL-01 canonical guardrails.
+#
+# Required GitHub Actions secrets:
+#   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL
+#   ANTHROPIC_API_KEY
+#
+# Manual runs: trigger from the Actions tab via workflow_dispatch.
+
+on:
+  pull_request:
+    paths:
+      - "lib/tools/**"
+      - "lib/clients/**"
+      - "lib/middleware/**"
+      - "app/[transport]/**"
+      - "evals/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/eval-gate.yml"
+  workflow_dispatch:
+
+# Cancel earlier in-progress runs on the same PR/branch so the latest
+# commit's eval is the authoritative one.
+concurrency:
+  group: eval-gate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tool-surface:
+    name: Eval gate — tool-surface snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:tool-surface (registered-tools snapshot)"
+        env:
+          EVAL_GATE: "1"
+        run: bun run eval:tool-surface
+
+  get-account:
+    name: Eval gate — get_account (Phase-1 Platform reads)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:get-account (args-overlap >= 0.8, description-quality >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:get-account
+
+  lookup-google-place:
+    name: Eval gate — lookup_google_place (Google Places family)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:lookup-google-place (args-overlap >= 0.8, description-quality >= 1.0, auth-isolation >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:lookup-google-place
+
+  integrations-shared:
+    name: Eval gate — phase2-integrations-shared (5 tools)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:integrations-shared (args-overlap >= 0.7, description-quality >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:integrations-shared
+
+  shopify-integration:
+    name: Eval gate — phase2-shopify-integration (6 tools)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:shopify-integration (args-overlap >= 0.75, description-quality >= 1.0, sensitive-and-single-use-language >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:shopify-integration
+
+  woocommerce-integration:
+    name: Eval gate — phase2-woocommerce-integration (6 tools)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:woocommerce-integration (args-overlap >= 0.75, description-quality >= 1.0, quiqup-vs-woocommerce-state-disambiguation >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:woocommerce-integration
+
+  salla-integration:
+    name: Eval gate — phase2-salla-integration (6 tools; token-omission + 404-as-null locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:salla-integration (args-overlap >= 0.75, description-quality >= 1.0, token-omission >= 1.0, four-oh-four-as-null >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:salla-integration
+
+  destructive-integrations:
+    name: Eval gate — phase2-destructive-integrations (2 tools; confirm-gate locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:destructive-integrations (args-overlap >= 0.7, confirm-elicited >= 0.75, confirm-gate-present >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:destructive-integrations
+
+  orders-graphql:
+    name: Eval gate — phase3-orders-graphql (2 tools; Orders Core GraphQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:orders-graphql (tool-name-match >= 0.75, args-overlap >= 0.7, description-quality >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:orders-graphql
+
+  orders-history-and-audit:
+    name: Eval gate — phase3-orders-history-and-audit (2 tools; audit auth-exception locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:orders-history-and-audit (args-overlap >= 0.7, description-quality >= 1.0, audit-no-bearer >= 1.0, audit-exception-header-present >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:orders-history-and-audit
+
+  orders-export:
+    name: Eval gate — phase3-orders-export (1 tool; binary-envelope contract locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:orders-export (tool-name-match >= 0.9, args-overlap >= 0.75, description-quality >= 1.0, binary-envelope-contract >= 1.0, csv-date-format-pin >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:orders-export
+
+  orders-document-upload:
+    name: Eval gate — phase3-orders-document-upload (1 tool; BL-04 server-binding + BL-01 guardrails locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:orders-document-upload (tool-name-match >= 0.9, args-overlap >= 0.7, description-quality >= 1.0, no-caller-identity-fields >= 1.0, guardrails-block-present >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:orders-document-upload

@@ -113,4 +113,64 @@ describe("redactArgs", () => {
       expect(out.filename).toBe("p.csv");
     });
   });
+
+  describe("OAuth + webhook secrets (Phase 2 BL-02)", () => {
+    // Shopify OAuth callback args carry `code` (the authorization code).
+    // The audit middleware must redact it before logging to stdout — see
+    // 02-REVIEW.md BL-02 for the rationale (it is briefly exchangeable for
+    // a Bearer token during the issuance window).
+    it("redacts OAuth `code` for setup_shopify_callback", () => {
+      const args = {
+        shop_name: "acme",
+        code: "shpat_oauth_temp_xyz",
+        is_fulfillment: true,
+      };
+      const out = redactArgs(args, "setup_shopify_callback") as Record<
+        string,
+        unknown
+      >;
+      // `code` lands in ALWAYS_REDACT_KEYS and so collapses regardless of
+      // tool family. (shop_name is not in the global safe list so it's
+      // redacted by the conservative write-family default — that is the
+      // existing behaviour, unrelated to BL-02.)
+      expect(out.code).toBe(REDACTED);
+    });
+
+    it("redacts OAuth `code` alongside `token` on update_shopify_connection", () => {
+      const args = {
+        shop_name: "acme",
+        code: "shpat_oauth_temp_xyz",
+        token: "tkn_x",
+        user_id: "usr_1",
+      };
+      const out = redactArgs(args, "update_shopify_connection") as Record<
+        string,
+        unknown
+      >;
+      // Both auth-bearing fields collapse to [REDACTED] — the original BL-02
+      // discrepancy (token redacted, code plaintext) must not recur.
+      expect(out.token).toBe(REDACTED);
+      expect(out.code).toBe(REDACTED);
+    });
+
+    it("redacts WooCommerce webhook + consumer secrets in any tool args", () => {
+      const args = {
+        shop_name: "acme",
+        consumer_secret: "cs_xxx",
+        client_secret: "cls_xxx",
+        webhook_secret: "wh_xxx",
+        order_created_webhook_secret: "ocs_xxx",
+        order_updated_webhook_secret: "ous_xxx",
+      };
+      const out = redactArgs(args, "upsert_woocommerce_config") as Record<
+        string,
+        unknown
+      >;
+      expect(out.consumer_secret).toBe(REDACTED);
+      expect(out.client_secret).toBe(REDACTED);
+      expect(out.webhook_secret).toBe(REDACTED);
+      expect(out.order_created_webhook_secret).toBe(REDACTED);
+      expect(out.order_updated_webhook_secret).toBe(REDACTED);
+    });
+  });
 });

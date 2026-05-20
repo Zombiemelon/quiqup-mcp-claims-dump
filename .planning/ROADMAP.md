@@ -15,9 +15,9 @@ Phase 1 establishes the auth/lookup substrate that everything else depends on. P
 
 ## Phases
 
-- [ ] **Phase 1: Account, Auth & Reference Data** — Read-mostly Platform endpoints + Google Places client; establishes the auth/lookup substrate that later phases depend on.
-- [ ] **Phase 2: Integrations (Shopify / WooCommerce / Salla)** — External-OAuth-shape Platform endpoints; two DESTRUCTIVE deletes gated by `confirm: true`.
-- [ ] **Phase 3: Orders — Read Path** — Orders Core GraphQL + Audit + Ex-core CSV export + Quiqup REST history; introduces three new service clients.
+- [x] **Phase 1: Account, Auth & Reference Data** — Read-mostly Platform endpoints + Google Places client; establishes the auth/lookup substrate that later phases depend on.
+- [x] **Phase 2: Integrations (Shopify / WooCommerce / Salla)** — External-OAuth-shape Platform endpoints; two DESTRUCTIVE deletes gated by `confirm: true`. Completed 2026-05-19 (6/6 waves).
+- [x] **Phase 3: Orders — Read Path** — Orders Core GraphQL + Audit + Ex-core CSV export + Quiqup REST history; introduces three new service clients. Completed 2026-05-20 (5/5 waves).
 - [ ] **Phase 4: Orders — Write Path & Lifecycle** — All `batch/set_*` status transitions, mission creation/transfer, and write-side Platform endpoints; every tool DESTRUCTIVE-gated.
 - [ ] **Phase 5: Labels, Slips & PDFs** — Quiqup-GraphQL-host REST client + base64 PDF response pattern shared by later phases (FIN PDFs).
 - [ ] **Phase 6: Inbound completion + Fulfilment gaps** — Three INBD gaps + six PROD gaps; closes the fulfilment receiving + product catalog endpoints.
@@ -42,10 +42,10 @@ Phase 1 establishes the auth/lookup substrate that everything else depends on. P
   5. `decide_feature_flags_bulk` works against the Platform `/featureflags/decide-bulk` endpoint and returns the flag map for downstream phase tools to gate behaviour.
 **Plans:** 4 plans
 Plans:
-- [ ] 01-01-PLAN.md — Auth & Account reads (AUTH-03/04/05/06/08/09 + INTG-19) — Wave 1
-- [ ] 01-02-PLAN.md — Addresses, geo lookups, Google Places + reason codes (ADDR-01..08 + ORDL-08..12) — Wave 2
-- [ ] 01-03-PLAN.md — Auth & Account writes + feature flags (AUTH-07/10/11/12/13) — Wave 3
-- [ ] 01-04-PLAN.md — Langfuse eval coverage (Platform reads + Google Places families) — Wave 4
+- [x] 01-01-PLAN.md — Auth & Account reads (AUTH-03/04/05/06/08/09 + INTG-19) — Wave 1 — completed 2026-05-19
+- [x] 01-02-PLAN.md — Addresses, geo lookups, Google Places + reason codes (ADDR-01..08 + ORDL-08..12) — Wave 2 — completed 2026-05-19
+- [x] 01-03-PLAN.md — Auth & Account writes + feature flags (AUTH-07/10/11/12/13) — Wave 3 — completed 2026-05-19
+- [x] 01-04-PLAN.md — Langfuse eval coverage (Platform reads + Google Places families) — Wave 4 — completed 2026-05-19
 **UI hint**: no
 
 ### Phase 2: Integrations (Shopify / WooCommerce / Salla)
@@ -58,7 +58,14 @@ Plans:
   3. An agent can fully configure WooCommerce via `list_woocommerce_connections` / `get_woocommerce_config` / `list_woocommerce_states` / `list_woocommerce_shipping_lines` / `setup_woocommerce_connection` / `upsert_woocommerce_config`.
   4. An agent can install Salla (returns OAuth URL), read its connection + config + platform-data, toggle fulfillment, and update config via `install_salla` / `get_salla_connection` / `get_salla_platform_data` / `get_salla_config` / `update_salla_config` / `toggle_salla_fulfillment`.
   5. Both DESTRUCTIVE deletes (`delete_integration_source`, `delete_salla_connection`) refuse to fire without an explicit `confirm: true` parameter and surface clear error semantics on missing confirmation.
-**Plans**: TBD
+**Plans:** 6 plans
+Plans:
+- [x] 02-01-PLAN.md — Shared integrations surface (INTG-01/03/04/05/06) — Wave 1
+- [x] 02-02-PLAN.md — Shopify family (INTG-07/08/09/10/11/12) — Wave 2
+- [x] 02-03-PLAN.md — WooCommerce family (INTG-13/14/15/16/17/18) — Wave 3
+- [x] 02-04-PLAN.md — Salla family non-destructive (INTG-20/21/23/24/25/26) — Wave 4
+- [x] 02-05-PLAN.md — DESTRUCTIVE deletes + canonical confirm:true gate helper (INTG-02/22) — Wave 5
+- [x] 02-06-PLAN.md — Langfuse eval coverage for 5 Phase-2 sub-families + CI gate updates — Wave 6 — completed 2026-05-19
 **UI hint**: no
 
 ### Phase 3: Orders — Read Path
@@ -71,7 +78,13 @@ Plans:
   3. An agent can read an order's full history via `get_order_history` (Quiqup REST client added) and its audit-event timeline via `list_order_audit_events` (Audit client added with `AUDIT_BASE_URL` env wiring).
   4. An agent can download a CSV export of orders via `download_orders_export` (Ex-core client added) — CSV returned as base64 per the binary-response contract.
   5. An agent can upload a document to an order via `upload_order_document` (multipart against Orders Core REST) and receive the resulting document reference.
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [x] 03-01-PLAN.md — Orders Core GraphQL client + lookup_orders_ids + bulk_orders_lookup (ORDL-02/03) — Wave 1 — completed 2026-05-19
+- [x] 03-02-PLAN.md — Quiqup REST history client + Audit client (auth-exception, AUDIT_BASE_URL wiring) + get_order_history + list_order_audit_events (ORDS-02/05) — Wave 2 — completed 2026-05-19
+- [x] 03-03-PLAN.md — Platform reads: find_order_by_id_or_barcode + list_depots + list_missions_filter (ORDL-04/05/06) — Wave 3 — completed 2026-05-20
+- [x] 03-04-PLAN.md — Ex-core CSV export client + Orders Core REST multipart client + download_orders_export + upload_order_document (ORDL-07/ORDS-08) — Wave 4 — completed 2026-05-20
+- [ ] 03-05-PLAN.md — Langfuse eval coverage for 4 new Phase-3 client families + CI gate updates — Wave 5
 **UI hint**: no
 
 ### Phase 4: Orders — Write Path & Lifecycle
@@ -184,9 +197,9 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Account, Auth & Reference Data | 0/4 | Not started | - |
-| 2. Integrations (Shopify / WooCommerce / Salla) | 0/0 | Not started | - |
-| 3. Orders — Read Path | 0/0 | Not started | - |
+| 1. Account, Auth & Reference Data | 4/4 | Plans complete (awaiting gsd-verifier) | 2026-05-19 |
+| 2. Integrations (Shopify / WooCommerce / Salla) | 2/6 | In progress (Waves 1+2 complete) | 2026-05-19 |
+| 3. Orders — Read Path | 3/5 | In progress (Waves 1+2+3 complete) | 2026-05-20 |
 | 4. Orders — Write Path & Lifecycle | 0/0 | Not started | - |
 | 5. Labels, Slips & PDFs | 0/0 | Not started | - |
 | 6. Inbound completion + Fulfilment gaps | 0/0 | Not started | - |

@@ -12,13 +12,13 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 
 - [x] **AUTH-01**: `whoami_platform` — `GET /me` (Platform) — diagnostic for actor-token (existing)
 - [x] **AUTH-02**: `register` — `POST /partner/register` (Platform) (existing)
-- [ ] **AUTH-03**: `get_account` — `GET /account` (Platform)
-- [ ] **AUTH-04**: `get_permissions` — `GET /permissions` (Platform)
-- [ ] **AUTH-05**: `get_account_capabilities` — `GET /accounts/{id}/capabilities` (Platform)
-- [ ] **AUTH-06**: `get_account_by_id` — `GET /accounts/{id}` (Platform)
+- [x] **AUTH-03**: `get_account` — `GET /account` (Platform)
+- [x] **AUTH-04**: `get_permissions` — `GET /permissions` (Platform)
+- [x] **AUTH-05**: `get_account_capabilities` — `GET /accounts/{id}/capabilities` (Platform)
+- [x] **AUTH-06**: `get_account_by_id` — `GET /accounts/{id}` (Platform)
 - [ ] **AUTH-07**: `update_account` — `PUT /accounts` (Platform) — also used by finance bank details
-- [ ] **AUTH-08**: `list_service_kinds` — `GET /quiqup/service-kinds` (Platform)
-- [ ] **AUTH-09**: `get_quiqdash_init` — `GET /quiqdash/init` (Platform) — bootstrap payload
+- [x] **AUTH-08**: `list_service_kinds` — `GET /quiqup/service-kinds` (Platform)
+- [x] **AUTH-09**: `get_quiqdash_init` — `GET /quiqdash/init` (Platform) — bootstrap payload
 - [ ] **AUTH-10**: `decide_feature_flags_bulk` — `POST /featureflags/decide-bulk` (Platform)
 - [ ] **AUTH-11**: `get_return_settings` — `GET /api/accounts/{accountID}/return-settings` (Platform)
 - [ ] **AUTH-12**: `update_return_settings` — `PUT /api/accounts/{accountID}/return-settings` (Platform)
@@ -38,41 +38,41 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 ### Integrations (INTG)
 
 - [ ] **INTG-01**: `list_integration_connections` — `GET /integrations/connections` (Platform)
-- [ ] **INTG-02**: `delete_integration_source` — `DELETE /{source}/delete/{shopName}` (Platform) — DESTRUCTIVE, requires `confirm: true`
+- [x] **INTG-02**: `delete_integration_source` — `DELETE /{source}/delete/{shopName}` (Platform) — DESTRUCTIVE, requires `confirm: true`
 - [ ] **INTG-03**: `list_integration_order_reasons` — `GET /integrations/order-reasons` (Platform)
 - [ ] **INTG-04**: `repair_integration_orders` — `POST /integrations/repair-orders` (Platform)
 - [ ] **INTG-05**: `get_integration_order` — `GET /order/{orderUUID}` (Platform)
 - [ ] **INTG-06**: `confirm_ff_export` — `POST /orders/confirm-ff-export` (Platform)
-- [ ] **INTG-07**: `get_shopify_config` — `GET /shopify/config/{shopName}` (Platform)
-- [ ] **INTG-08**: `list_shopify_delivery_methods` — `GET /shopify/delivery-methods` (Platform)
-- [ ] **INTG-09**: `list_shopify_locations` — `GET /shopify/locations` (Platform)
-- [ ] **INTG-10**: `update_shopify_config` — `PUT /shopify/config` (Platform)
-- [ ] **INTG-11**: `update_shopify_connection` — `PUT /shopify/connection` (Platform)
-- [ ] **INTG-12**: `setup_shopify_callback` — `POST /shopify/callback` (Platform) — OAuth completion
+- [x] **INTG-07**: `get_shopify_config` — `GET /shopify/config/{shopName}` (Platform)
+- [x] **INTG-08**: `list_shopify_delivery_methods` — `GET /shopify/delivery-methods` (Platform)
+- [x] **INTG-09**: `list_shopify_locations` — `GET /shopify/locations` (Platform)
+- [x] **INTG-10**: `update_shopify_config` — `PUT /shopify/config` (Platform)
+- [x] **INTG-11**: `update_shopify_connection` — `PUT /shopify/connection` (Platform)
+- [x] **INTG-12**: `setup_shopify_callback` — `POST /shopify/callback` (Platform) — OAuth completion
 - [ ] **INTG-13**: `list_woocommerce_connections` — `GET /woocommerce/connections` (Platform)
 - [ ] **INTG-14**: `get_woocommerce_config` — `GET /woocommerce/config/{siteName}` (Platform)
 - [ ] **INTG-15**: `list_woocommerce_states` — `GET /woocommerce/states` (Platform)
 - [ ] **INTG-16**: `list_woocommerce_shipping_lines` — `GET /woocommerce/shipping-lines` (Platform)
 - [ ] **INTG-17**: `setup_woocommerce_connection` — `POST /woocommerce/connection` (Platform)
 - [ ] **INTG-18**: `upsert_woocommerce_config` — `PUT /woocommerce/settings/config/upsert` (Platform)
-- [ ] **INTG-19**: `list_quiqup_order_states` — `GET /quiqup/orders/states` (Platform)
-- [ ] **INTG-20**: `install_salla` — `GET /integrations/install/salla` (Platform) — returns OAuth URL
-- [ ] **INTG-21**: `get_salla_connection` — `GET /integrations/connections/{id}` (Platform)
-- [ ] **INTG-22**: `delete_salla_connection` — `DELETE /integrations/connections/{id}` (Platform) — DESTRUCTIVE
-- [ ] **INTG-23**: `toggle_salla_fulfillment` — `PUT /integrations/connections/{id}/fulfillment` (Platform)
-- [ ] **INTG-24**: `get_salla_platform_data` — `GET /integrations/configs/{connectionId}/platform-data` (Platform)
-- [ ] **INTG-25**: `get_salla_config` — `GET /integrations/configs/{connectionId}` (Platform)
-- [ ] **INTG-26**: `update_salla_config` — `PUT /integrations/configs/{connectionId}` (Platform)
+- [x] **INTG-19**: `list_quiqup_order_states` — `GET /quiqup/orders/states` (Platform)
+- [x] **INTG-20**: `install_salla` — `GET /integrations/install/salla` (Platform) — returns OAuth URL
+- [x] **INTG-21**: `get_salla_connection` — `GET /integrations/connections/{id}` (Platform)
+- [x] **INTG-22**: `delete_salla_connection` — `DELETE /integrations/connections/{id}` (Platform) — DESTRUCTIVE
+- [x] **INTG-23**: `toggle_salla_fulfillment` — `PUT /integrations/connections/{id}/fulfillment` (Platform)
+- [x] **INTG-24**: `get_salla_platform_data` — `GET /integrations/configs/{connectionId}/platform-data` (Platform)
+- [x] **INTG-25**: `get_salla_config` — `GET /integrations/configs/{connectionId}` (Platform)
+- [x] **INTG-26**: `update_salla_config` — `PUT /integrations/configs/{connectionId}` (Platform)
 
 ### Orders — Listing & Filters (ORDL)
 
 - [x] **ORDL-01**: `recent_orders` — orders listing (existing; covers `ordersListingQuery` GraphQL)
-- [ ] **ORDL-02**: `lookup_orders_ids` — `ordersListingIdsQuery` GraphQL (Orders Core GraphQL)
-- [ ] **ORDL-03**: `bulk_orders_lookup` — `bulkOrdersLookupQuery` GraphQL (Orders Core GraphQL)
-- [ ] **ORDL-04**: `find_order_by_id_or_barcode` — `GET /quiqdash/orders/find_by_id_or_barcode` (Platform)
-- [ ] **ORDL-05**: `list_depots` — `GET /quiqdash/depots` (Platform)
-- [ ] **ORDL-06**: `list_missions_filter` — `GET /quiqdash/missions` (Platform) — autocomplete form
-- [ ] **ORDL-07**: `download_orders_export` — `GET /orders/download` (Ex-core) — CSV
+- [x] **ORDL-02**: `lookup_orders_ids` — `ordersListingIdsQuery` GraphQL (Orders Core GraphQL)
+- [x] **ORDL-03**: `bulk_orders_lookup` — `bulkOrdersLookupQuery` GraphQL (Orders Core GraphQL)
+- [x] **ORDL-04**: `find_order_by_id_or_barcode` — `GET /quiqdash/orders/find_by_id_or_barcode` (Platform)
+- [x] **ORDL-05**: `list_depots` — `GET /quiqdash/depots` (Platform)
+- [x] **ORDL-06**: `list_missions_filter` — `GET /quiqdash/missions` (Platform) — autocomplete form
+- [x] **ORDL-07**: `download_orders_export` — `GET /orders/download` (Ex-core) — CSV
 - [ ] **ORDL-08**: `list_partner_cancellation_reasons` — `GET /orders/partner-cancellation-reasons` (Platform/Quiqup REST)
 - [ ] **ORDL-09**: `list_on_hold_reasons` — `GET /quiqdash/orders/states/on_hold_reasons` (Platform)
 - [ ] **ORDL-10**: `list_return_to_origin_reasons` — `GET /quiqdash/orders/states/return_to_origin_reasons` (Platform)
@@ -88,7 +88,7 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 - [ ] **ORDS-05**: `list_order_audit_events` — `GET {AUDIT_BASE_URL}/events?resourceID.eq={orderUuid}` (Audit) — new client
 - [ ] **ORDS-06**: `create_order_charge` — `POST /quiqdash/order-charge` (Platform)
 - [ ] **ORDS-07**: `update_order_weight` — `PATCH /quiqdash/orders/{orderId}/weight` (Platform)
-- [ ] **ORDS-08**: `upload_order_document` — `POST /orders-by-client-id/{clientOrderID}/documents` (Orders Core REST) — multipart
+- [x] **ORDS-08**: `upload_order_document` — `POST /orders-by-client-id/{clientOrderID}/documents` (Orders Core REST) — multipart
 
 ### Orders — Creation (ORDC)
 
@@ -284,13 +284,13 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 |-------------|-------|--------|
 | AUTH-01 | (shipped) | Validated |
 | AUTH-02 | (shipped) | Validated |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Completed (01-01) |
+| AUTH-04 | Phase 1 | Completed (01-01) |
+| AUTH-05 | Phase 1 | Completed (01-01) |
+| AUTH-06 | Phase 1 | Completed (01-01) |
 | AUTH-07 | Phase 1 | Pending |
-| AUTH-08 | Phase 1 | Pending |
-| AUTH-09 | Phase 1 | Pending |
+| AUTH-08 | Phase 1 | Completed (01-01) |
+| AUTH-09 | Phase 1 | Completed (01-01) |
 | AUTH-10 | Phase 1 | Pending |
 | AUTH-11 | Phase 1 | Pending |
 | AUTH-12 | Phase 1 | Pending |
@@ -304,38 +304,38 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | ADDR-07 | Phase 1 | Pending |
 | ADDR-08 | Phase 1 | Pending |
 | INTG-01 | Phase 2 | Pending |
-| INTG-02 | Phase 2 | Pending |
+| INTG-02 | Phase 2 / Plan 02-05 | Shipped (commit 2596253) |
 | INTG-03 | Phase 2 | Pending |
 | INTG-04 | Phase 2 | Pending |
 | INTG-05 | Phase 2 | Pending |
 | INTG-06 | Phase 2 | Pending |
-| INTG-07 | Phase 2 | Pending |
-| INTG-08 | Phase 2 | Pending |
-| INTG-09 | Phase 2 | Pending |
-| INTG-10 | Phase 2 | Pending |
-| INTG-11 | Phase 2 | Pending |
-| INTG-12 | Phase 2 | Pending |
+| INTG-07 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-08 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-09 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-10 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-11 | Phase 2 / 02-02 | Complete (2026-05-19) |
+| INTG-12 | Phase 2 / 02-02 | Complete (2026-05-19) |
 | INTG-13 | Phase 2 | Pending |
 | INTG-14 | Phase 2 | Pending |
 | INTG-15 | Phase 2 | Pending |
 | INTG-16 | Phase 2 | Pending |
 | INTG-17 | Phase 2 | Pending |
 | INTG-18 | Phase 2 | Pending |
-| INTG-19 | Phase 1 | Pending |
-| INTG-20 | Phase 2 | Pending |
-| INTG-21 | Phase 2 | Pending |
-| INTG-22 | Phase 2 | Pending |
-| INTG-23 | Phase 2 | Pending |
-| INTG-24 | Phase 2 | Pending |
-| INTG-25 | Phase 2 | Pending |
-| INTG-26 | Phase 2 | Pending |
+| INTG-19 | Phase 1 | Completed (01-01) |
+| INTG-20 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
+| INTG-21 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
+| INTG-22 | Phase 2 / Plan 02-05 | Shipped (commit 2596253) |
+| INTG-23 | Phase 2 / Plan 02-04 | Shipped (commit 7a24f62) |
+| INTG-24 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
+| INTG-25 | Phase 2 / Plan 02-04 | Shipped (commit 6781345) |
+| INTG-26 | Phase 2 / Plan 02-04 | Shipped (commit 7a24f62) |
 | ORDL-01 | (shipped) | Validated |
-| ORDL-02 | Phase 3 | Pending |
-| ORDL-03 | Phase 3 | Pending |
-| ORDL-04 | Phase 3 | Pending |
-| ORDL-05 | Phase 3 | Pending |
-| ORDL-06 | Phase 3 | Pending |
-| ORDL-07 | Phase 3 | Pending |
+| ORDL-02 | Phase 3 / Plan 03-01 | Shipped (commit 3d80c4b) |
+| ORDL-03 | Phase 3 / Plan 03-01 | Shipped (commit 3d80c4b) |
+| ORDL-04 | Phase 3 / Plan 03-03 | Shipped (commit 05d2327) |
+| ORDL-05 | Phase 3 / Plan 03-03 | Shipped (commit 05d2327) |
+| ORDL-06 | Phase 3 / Plan 03-03 | Shipped (commit 05d2327) |
+| ORDL-07 | Phase 3 / Plan 03-04 | Shipped (commit 1601297) |
 | ORDL-08 | Phase 1 | Pending |
 | ORDL-09 | Phase 1 | Pending |
 | ORDL-10 | Phase 1 | Pending |
@@ -348,7 +348,7 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | ORDS-05 | Phase 3 | Pending |
 | ORDS-06 | Phase 4 | Pending |
 | ORDS-07 | Phase 4 | Pending |
-| ORDS-08 | Phase 3 | Pending |
+| ORDS-08 | Phase 3 / Plan 03-04 | Shipped (commit 69077cd) |
 | ORDC-01 | (shipped) | Validated |
 | ORDC-02 | (shipped) | Validated |
 | ORDC-03 | (shipped) | Validated |

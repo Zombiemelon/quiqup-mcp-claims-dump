@@ -1,0 +1,303 @@
+/**
+ * Scorers for the Phase-3 Quiqup REST history + Audit family eval
+ * (orders-history-and-audit-v1).
+ *
+ * Six scorers feed Langfuse traces:
+ *
+ *   1. tool-name-match (0/1)            — accepts either a single expected
+ *      tool name OR an array of acceptable tool names (the dataset has one
+ *      disambiguation item where both tools are reasonable).
+ *
+ *   2. required-fields-present (0..1)   — per-tool rules:
+ *        get_order_history       → order_id
+ *        list_order_audit_events → order_uuid
+ *
+ *   3. args-overlap (0..1)              — wrapped from ./score-tool-call.ts.
+ *
+ *   4. description-quality (0..1)       — STATIC; per-tool substring
+ *      checklist on production spec.description.
+ *
+ *   5. audit-no-bearer (0/1)            — STATIC source-inspection;
+ *      readFile()s `lib/clients/audit.ts`, STRIPS line + block comments
+ *      (the file-header AUTH EXCEPTION block legitimately mentions
+ *      "Authorization" and "Bearer" — the comment-strip avoids a false
+ *      positive against the very comment that documents the lockdown),
+ *      and asserts the comment-stripped source contains ZERO occurrences
+ *      of "Authorization" or "Bearer" (case-insensitive).
+ *      Locks the AUTH EXCEPTION for the Audit client — the second-ever
+ *      auth-exception client in this project after Google Places.
+ *
+ *   6. audit-exception-header-present (0/1) — STATIC; readFile()s the
+ *      same `lib/clients/audit.ts` and asserts the literal substring
+ *      "AUTH EXCEPTION" is present in the file header. Documents the
+ *      design intent without locking the exact comment wording.
+ *
+ * Lenient by design on tool-name + args; STRICT on the auth-exception
+ * invariants.
+ */
+
+import type { Evaluator } from "@langfuse/client";
+
+import { argsOverlap as _argsOverlap } from "./score-tool-call";
+
+import { spec as getOrderHistorySpec } from "@/lib/tools/get-order-history";
+import { spec as listOrderAuditEventsSpec } from "@/lib/tools/list-order-audit-events";
+
+/**
+ * Tool-name match — accepts either a single expected tool name OR an
+ * array of acceptable names. The disambiguation item in the dataset uses
+ * an array because both tools are reasonable for "everything that
+ * happened to this order".
+ */
+export const toolNameMatch: Evaluator = async ({ output, expectedOutput }) => {
+  const actual = (output as { tool?: string } | undefined)?.tool ?? null;
+  const expected = (expectedOutput as { tool?: string | string[] } | undefined)
+    ?.tool;
+  const acceptable: string[] = Array.isArray(expected)
+    ? expected
+    : expected
+      ? [expected]
+      : [];
+  const match = actual !== null && acceptable.includes(actual);
+  return {
+    name: "tool-name-match",
+    value: match ? 1.0 : 0.0,
+    comment: match
+      ? `Called ${actual}`
+      : `Expected one of [${acceptable.join(", ") || "<none>"}], got ${actual ?? "<no tool call>"}`,
+  };
+};
+
+export const argsOverlap: Evaluator = async (ctx) => {
+  const r = await _argsOverlap(ctx);
+  return { ...r, name: "args-overlap" };
+};
+
+const REQUIRED_FIELDS: Record<string, readonly string[]> = {
+  get_order_history: ["order_id"],
+  list_order_audit_events: ["order_uuid"],
+};
+
+export const requiredFieldsPresent: Evaluator = async ({
+  output,
+  expectedOutput,
+}) => {
+  const args =
+    (output as { args?: Record<string, unknown> } | undefined)?.args ?? {};
+  const expectedTool =
+    (expectedOutput as { tool?: string | string[] } | undefined)?.tool;
+  // For the disambiguation case (array of acceptable tools), score against
+  // whichever tool the agent actually picked.
+  const actualTool = (output as { tool?: string } | undefined)?.tool ?? null;
+  const toolKey =
+    actualTool && REQUIRED_FIELDS[actualTool]
+      ? actualTool
+      : typeof expectedTool === "string"
+        ? expectedTool
+        : Array.isArray(expectedTool) && expectedTool[0]
+          ? expectedTool[0]
+          : null;
+  const required = toolKey ? REQUIRED_FIELDS[toolKey] ?? [] : [];
+  if (required.length === 0) {
+    return {
+      name: "required-fields-present",
+      value: 1.0,
+      comment: `no required args for ${toolKey ?? "<unknown>"}`,
+    };
+  }
+  const present = required.filter((k) => k in args);
+  return {
+    name: "required-fields-present",
+    value: present.length / required.length,
+    comment: `${present.length}/${required.length}: [${present.join(", ")}]`,
+  };
+};
+
+interface DescriptionCheck {
+  spec: { name: string; description: string };
+  substrings: string[];
+}
+
+const DESCRIPTION_CHECKS: DescriptionCheck[] = [
+  {
+    spec: getOrderHistorySpec,
+    substrings: [
+      // Endpoint marker.
+      "/orders/{id}/history",
+      // Error-modes section.
+      "401",
+      // Cross-tool disambiguation — must mention the companion tool.
+      "list_order_audit_events",
+      // Canonical example block.
+      "Example:",
+    ],
+  },
+  {
+    spec: listOrderAuditEventsSpec,
+    substrings: [
+      // Endpoint marker.
+      "/events?resourceID.eq={orderUuid}",
+      // Cross-tool disambiguation.
+      "get_order_history",
+      // Auth-exception language — description MUST tell the LLM the
+      // upstream is no-auth by design (mirrors T-02-29 token omission
+      // and the Phase-1 Google Places auth-isolation precedent). The
+      // production description uses the literal "NO Authorization"
+      // phrasing (see lib/tools/list-order-audit-events.ts).
+      "NO Authorization",
+      // Canonical example block.
+      "Example:",
+    ],
+  },
+];
+
+const MIN_DESCRIPTION_LENGTH = 200;
+
+export const descriptionQuality: Evaluator = async () => {
+  const failures: string[] = [];
+  let total = 0;
+  let passed = 0;
+  for (const check of DESCRIPTION_CHECKS) {
+    const desc = check.spec.description;
+    total += 1;
+    if (desc.length >= MIN_DESCRIPTION_LENGTH) {
+      passed += 1;
+    } else {
+      failures.push(
+        `${check.spec.name}: description length ${desc.length} < ${MIN_DESCRIPTION_LENGTH}`,
+      );
+    }
+    for (const sub of check.substrings) {
+      total += 1;
+      if (desc.includes(sub)) {
+        passed += 1;
+      } else {
+        failures.push(`${check.spec.name}: description missing "${sub}"`);
+      }
+    }
+  }
+  return {
+    name: "description-quality",
+    value: total > 0 ? passed / total : 0,
+    comment:
+      failures.length === 0
+        ? `${passed}/${total} description assertions passed`
+        : `${passed}/${total}; failures: ${failures.join("; ")}`,
+  };
+};
+
+/**
+ * STATIC source-inspection: audit-no-bearer.
+ *
+ * Reads lib/clients/audit.ts, STRIPS line + block comments (the file
+ * header LEGITIMATELY mentions "Authorization" and "Bearer" in the AUTH
+ * EXCEPTION lockdown block — comment-stripping precisely mirrors the
+ * Google Places auth-isolation scorer's approach so the very comment
+ * that documents the lockdown does not falsely trip the scorer), and
+ * asserts the comment-stripped source contains ZERO occurrences of
+ * "Authorization" or "Bearer" (case-insensitive).
+ *
+ * A maintainer cannot land a regression that adds an Authorization
+ * header to audit.ts without simultaneously editing this scorer.
+ * Mirrors the Phase-1 auth-isolation scorer for Google Places and the
+ * Phase-2 token-omission scorer for get-salla-connection.
+ */
+const AUDIT_CLIENT_SOURCE_PATH = "lib/clients/audit.ts";
+
+/**
+ * Strip /* ... *​/ block comments AND // line comments from a TS source
+ * string. Deliberately a regex-only pass, not a real TS parser — false
+ * positives on string-literal occurrences are accepted (no realistic
+ * code-path needs to mention "Authorization" or "Bearer" in a non-import
+ * string literal in this client; the unit test catches anything this
+ * misses).
+ */
+function stripComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, "") // block comments
+    .replace(/(^|[^:])\/\/.*$/gm, "$1"); // line comments (skip protocol-//-)
+}
+
+const FORBIDDEN_AUTH_SUBSTRINGS = ["authorization", "bearer"] as const;
+
+export const auditNoBearer: Evaluator = async () => {
+  const { readFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+
+  let raw: string;
+  try {
+    raw = await readFile(
+      path.resolve(process.cwd(), AUDIT_CLIENT_SOURCE_PATH),
+      "utf-8",
+    );
+  } catch (err) {
+    return {
+      name: "audit-no-bearer",
+      value: 0.0,
+      comment: `read failed for ${AUDIT_CLIENT_SOURCE_PATH}: ${(err as Error).message}`,
+    };
+  }
+
+  const code = stripComments(raw).toLowerCase();
+  const failures: string[] = [];
+  for (const sub of FORBIDDEN_AUTH_SUBSTRINGS) {
+    if (code.includes(sub)) {
+      failures.push(
+        `${AUDIT_CLIENT_SOURCE_PATH}: must not contain "${sub}" in non-comment code`,
+      );
+    }
+  }
+
+  return {
+    name: "audit-no-bearer",
+    value: failures.length === 0 ? 1.0 : 0.0,
+    comment:
+      failures.length === 0
+        ? "audit.ts (sans comments) is free of Authorization/Bearer references — auth-exception holds"
+        : `failures: ${failures.join("; ")}`,
+  };
+};
+
+/**
+ * STATIC source-inspection: audit-exception-header-present.
+ *
+ * Reads lib/clients/audit.ts and asserts the literal substring
+ * "AUTH EXCEPTION" is present. Documents the design intent at the
+ * eval-gate level without locking the exact comment wording.
+ */
+export const auditExceptionHeaderPresent: Evaluator = async () => {
+  const { readFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+
+  let raw: string;
+  try {
+    raw = await readFile(
+      path.resolve(process.cwd(), AUDIT_CLIENT_SOURCE_PATH),
+      "utf-8",
+    );
+  } catch (err) {
+    return {
+      name: "audit-exception-header-present",
+      value: 0.0,
+      comment: `read failed for ${AUDIT_CLIENT_SOURCE_PATH}: ${(err as Error).message}`,
+    };
+  }
+
+  const present = raw.includes("AUTH EXCEPTION");
+  return {
+    name: "audit-exception-header-present",
+    value: present ? 1.0 : 0.0,
+    comment: present
+      ? `${AUDIT_CLIENT_SOURCE_PATH} contains the AUTH EXCEPTION header — design intent documented`
+      : `${AUDIT_CLIENT_SOURCE_PATH} is missing the "AUTH EXCEPTION" header block`,
+  };
+};
+
+export const evaluators = [
+  toolNameMatch,
+  requiredFieldsPresent,
+  argsOverlap,
+  descriptionQuality,
+  auditNoBearer,
+  auditExceptionHeaderPresent,
+];

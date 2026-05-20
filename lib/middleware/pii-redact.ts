@@ -133,6 +133,16 @@ const ALWAYS_REDACT_KEYS = new Set<string>([
   "jwt",
   "api_key",
   "secret",
+  // OAuth + webhook-signing credentials (Phase 2 Shopify/WooCommerce/Salla).
+  // `code` is the OAuth authorization code — single-use but exchangeable
+  // for a Bearer token during the issuance window, so MUST be redacted in
+  // audit logs (BL-02).
+  "code",
+  "consumer_secret",
+  "client_secret",
+  "webhook_secret",
+  "order_created_webhook_secret",
+  "order_updated_webhook_secret",
 ]);
 
 /**
