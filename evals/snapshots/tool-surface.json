@@ -75,6 +75,7 @@
     "remove_parcel_from_order": "enabled",
     "repair_integration_orders": "enabled",
     "set_collection_failed_batch": "enabled",
+    "set_delivery_complete_batch": "enabled",
     "set_delivery_failed_batch": "enabled",
     "set_out_for_delivery_batch": "enabled",
     "setup_shopify_callback": "enabled",
