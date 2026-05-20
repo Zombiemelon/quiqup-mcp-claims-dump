@@ -98,6 +98,12 @@
 
 (none)
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260520-bwa | Live-test `get_order_history` against staging order 57282; bound outbound fetch with 25s AbortSignal + bump route maxDuration; lock live-staging-verification rule into AGENTS.md | 2026-05-20 | 1618a21 | [260520-bwa-live-test-get-order-history-against-stag](./quick/260520-bwa-live-test-get-order-history-against-stag/) |
+
 ## Session Continuity
 
 - **Last session:** 2026-05-20 — completed Plan 03-04 (Phase 3 Wave 4: Ex-core CSV export + Orders Core REST multipart upload — ORDL-07/ORDS-08). Shipped: two NEW service clients (`lib/clients/ex-core.ts` with EX_API_BASE_URL family, `lib/clients/orders-core-rest.ts` with FE-aligned QUIQUP_ORDERS_GRAPH_URL minus /graph fallback chain), two tool specs (`lib/tools/download-orders-export.ts` returning the canonical `{ contentType, base64, filenameHint }` binary envelope, `lib/tools/upload-order-document.ts` carrying BL-01 canonical guardrails + BL-04 server-bound identity + 10MB pre-flight cap + filename hygiene), and three test files (6 ex-core client tests, 6 orders-core-rest client tests, 14 tool tests across 2 describe blocks). `requestMultipart` deliberately omits Content-Type — runtime test locks in the multipart-without-manual-Content-Type contract by asserting the captured Content-Type startsWith multipart/form-data AND contains boundary= parameter. `app/[transport]/route.ts` registers both new tools under a Phase-3 Wave-4 comment block; `evals/snapshots/tool-surface.json` records both as `enabled` (93 total tools, +2 from Wave 3's 91). Full suite: 585 passed, 3 skipped, 0 regressions (+26 vs Wave 3 baseline). `EVAL_GATE=1 bun run eval:tool-surface` exits 0. Commits: `1601297` (Task 1 — Ex-core client + ORDL-07), `69077cd` (Task 2 — Orders Core REST + ORDS-08), `c9e49c5` (Task 3 — tool tests + registration + snapshot).
@@ -105,4 +111,4 @@
 
 ---
 *State initialized: 2026-05-19*
-*Last updated: 2026-05-20 (post 03-04 execution — Phase 3 Wave 4 complete; Ex-core CSV export + Orders Core REST multipart upload — ORDL-07 + ORDS-08 live)*
+*Last updated: 2026-05-20 (quick task 260520-bwa — live-test `get_order_history` against staging order 57282; AbortSignal.timeout(25_000) + maxDuration=60 + live-staging-verification rule in AGENTS.md)*
