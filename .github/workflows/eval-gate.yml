@@ -34,6 +34,24 @@ name: Eval Gate
 #     orders-document-upload includes the no-caller-identity-fields +
 #     guardrails-block-present STATIC scorers that lock BL-04
 #     server-binding + BL-01 canonical guardrails.
+#   - batch-transitions, single-order-mutations, order-creation,
+#     missions — Phase-4 family coverage (added 2026-05-21, plan 04-05).
+#     batch-transitions includes destructive-gate-present + factory-
+#     uniformity + reason-field-pin + dry-run-richness STATIC scorers
+#     that lock T-04-26/27/28/29 + D-01/D-02/D-03 — the canonical
+#     batch-transition contract (11 factory ORDT + unpool_order +
+#     update_fulfilment_order_status + transfer_mission_orders share
+#     confirm+dry_run via lib/middleware/destructive.ts; the 4 reason-
+#     bearing tools use free-form z.string() and name their list_*_
+#     reasons companion; the factory still synthesizes the rich preview).
+#     single-order-mutations includes destructive-gate-present-ords-04
+#     (D-06 split — ONLY update_fulfilment_order_status is gated) and
+#     numeric-bounds-pin (T-04-13/14 — 100_000 amount cap + .max(1000)
+#     weight cap). order-creation includes bl-04-server-binding (T-04-30)
+#     and bulk-csv-cap-pin (T-04-31 — 13_500_000 / ~10MB). missions
+#     includes the critical gating-asymmetry-lock STATIC scorer that
+#     locks D-05 (create_mission has NO confirm; transfer_mission_orders
+#     wires the canonical destructive confirm+dry_run).
 #
 # Required GitHub Actions secrets:
 #   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL
@@ -344,3 +362,99 @@ jobs:
           LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: bun run eval:orders-document-upload
+
+  batch-transitions:
+    name: Eval gate — phase4-batch-transitions (12 tools; D-01 factory + D-02 reason + D-03 dry-run + T-04-28 destructive locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:batch-transitions (tool-name-match >= 0.75, args-overlap >= 0.7, description-quality >= 1.0, destructive-gate-present >= 1.0, factory-uniformity >= 1.0, reason-field-pin >= 1.0, dry-run-richness >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:batch-transitions
+
+  single-order-mutations:
+    name: Eval gate — phase4-single-order-mutations (4 tools; D-06 split + T-04-13/14 numeric caps locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:single-order-mutations (tool-name-match >= 0.75, args-overlap >= 0.7, description-quality >= 1.0, destructive-gate-present-ords-04 >= 1.0, numeric-bounds-pin >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:single-order-mutations
+
+  order-creation:
+    name: Eval gate — phase4-order-creation (2 tools; BL-04 server-binding + bulk-CSV cap locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:order-creation (tool-name-match >= 0.75, args-overlap >= 0.6, description-quality >= 1.0, bl-04-server-binding >= 1.0, bulk-csv-cap-pin >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:order-creation
+
+  missions:
+    name: Eval gate — phase4-missions (2 tools; D-05 gating asymmetry locked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: "Eval gate — eval:missions (tool-name-match >= 0.75, args-overlap >= 0.7, description-quality >= 1.0, gating-asymmetry-lock >= 1.0)"
+        env:
+          EVAL_GATE: "1"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run eval:missions

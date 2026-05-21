@@ -27,6 +27,10 @@
     "eval:orders-history-and-audit": "bun run evals/orders-history-and-audit.ts",
     "eval:orders-export": "bun run evals/orders-export.ts",
     "eval:orders-document-upload": "bun run evals/orders-document-upload.ts",
+    "eval:batch-transitions": "bun run evals/batch-transitions.ts",
+    "eval:single-order-mutations": "bun run evals/single-order-mutations.ts",
+    "eval:order-creation": "bun run evals/order-creation.ts",
+    "eval:missions": "bun run evals/missions.ts",
     "browserbase:create-context": "bun run scripts/browserbase-create-context.ts",
     "browserbase:bootstrap-login": "bun run scripts/quiqup-bootstrap-login.ts",
     "inspect:orders-filter": "bun run scripts/inspect-orders-filter.ts"

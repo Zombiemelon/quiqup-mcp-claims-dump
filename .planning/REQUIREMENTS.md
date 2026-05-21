@@ -83,11 +83,11 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 
 - [x] **ORDS-01**: `get_lastmile_order` — order detail read (existing; covers `orderDetailsQuery` GraphQL surface)
 - [ ] **ORDS-02**: `get_order_history` — `GET /orders/{id}/history` (Quiqup REST)
-- [ ] **ORDS-03**: `export_order` — `PUT /orders/export/{id}` (Quiqup REST)
-- [ ] **ORDS-04**: `update_fulfilment_order_status` — `PATCH /api/fulfilment/orders/{id}` (Platform)
+- [x] **ORDS-03**: `export_order` — `PUT /orders/export/{id}` (Quiqup REST)
+- [x] **ORDS-04**: `update_fulfilment_order_status` — `PATCH /api/fulfilment/orders/{id}` (Platform)
 - [ ] **ORDS-05**: `list_order_audit_events` — `GET {AUDIT_BASE_URL}/events?resourceID.eq={orderUuid}` (Audit) — new client
-- [ ] **ORDS-06**: `create_order_charge` — `POST /quiqdash/order-charge` (Platform)
-- [ ] **ORDS-07**: `update_order_weight` — `PATCH /quiqdash/orders/{orderId}/weight` (Platform)
+- [x] **ORDS-06**: `create_order_charge` — `POST /quiqdash/order-charge` (Platform)
+- [x] **ORDS-07**: `update_order_weight` — `PATCH /quiqdash/orders/{orderId}/weight` (Platform)
 - [x] **ORDS-08**: `upload_order_document` — `POST /orders-by-client-id/{clientOrderID}/documents` (Orders Core REST) — multipart
 
 ### Orders — Creation (ORDC)
@@ -95,8 +95,8 @@ Requirements are grouped by service-host family. Each REQ-ID maps to one MCP too
 - [x] **ORDC-01**: `create_lastmile_order` — `POST /quiqdash/orders` (Platform) (existing, eval baseline)
 - [x] **ORDC-02**: `update_lastmile_order` — order update (existing)
 - [x] **ORDC-03**: `update_order_waypoint` — pickup/dropoff address edit (existing)
-- [ ] **ORDC-04**: `create_internal_fulfilment_order` — `POST /internal/fulfilment/orders` (Platform)
-- [ ] **ORDC-05**: `bulk_create_orders` — `POST /quiqdash/bulk_orders` (Platform) — multipart CSV
+- [x] **ORDC-04**: `create_internal_fulfilment_order` — `POST /internal/fulfilment/orders` (Platform)
+- [x] **ORDC-05**: `bulk_create_orders` — `POST /quiqdash/bulk_orders` (Platform) — multipart CSV
 
 ### Orders — Status Transitions (ORDT)
 
@@ -104,23 +104,23 @@ All `PUT /quiqdash/orders/batch/...` and friends. All DESTRUCTIVE → require `c
 
 - [x] **ORDT-01**: `mark_ready_for_collection` — `set_ready_for_collection` (existing)
 - [x] **ORDT-02**: `cancel_lastmile_orders_batch` — `set_cancelled` (existing)
-- [ ] **ORDT-03**: `set_collected` — `PUT /quiqdash/orders/batch/set_collected`
-- [ ] **ORDT-04**: `set_received_at_depot` — `PUT /quiqdash/orders/batch/set_received_at_depot`
-- [ ] **ORDT-05**: `set_at_depot` — `PUT /quiqdash/orders/batch/set_at_depot`
-- [ ] **ORDT-06**: `set_in_transit` — `PUT /quiqdash/orders/batch/set_in_transit`
-- [ ] **ORDT-07**: `set_scheduled` — `PUT /quiqdash/orders/batch/set_scheduled`
-- [ ] **ORDT-08**: `set_delivery_complete` — `PUT /quiqdash/orders/batch/set_delivery_complete`
-- [ ] **ORDT-09**: `set_on_hold` — `PUT /quiqdash/orders/batch/set_on_hold`
-- [ ] **ORDT-10**: `set_return_to_origin` — `PUT /quiqdash/orders/batch/set_return_to_origin`
-- [ ] **ORDT-11**: `set_returned_to_origin` — `PUT /quiqdash/orders/batch/set_returned_to_origin`
-- [ ] **ORDT-12**: `set_delivery_failed` — `PUT /quiqdash/orders/batch/set_delivery_failed`
-- [ ] **ORDT-13**: `set_collection_failed` — `PUT /quiqdash/courier/orders/set_collection_failed`
-- [ ] **ORDT-14**: `unpool_order` — `PUT /quiqdash/missions/unpool/orders/{orderUUID}`
+- [x] **ORDT-03**: `set_collected` — `PUT /quiqdash/orders/batch/set_collected`
+- [x] **ORDT-04**: `set_received_at_depot` — `PUT /quiqdash/orders/batch/set_received_at_depot`
+- [x] **ORDT-05**: `set_at_depot` — `PUT /quiqdash/orders/batch/set_at_depot`
+- [x] **ORDT-06**: `set_in_transit` — `PUT /quiqdash/orders/batch/set_in_transit`
+- [x] **ORDT-07**: `set_scheduled` — `PUT /quiqdash/orders/batch/set_scheduled`
+- [x] **ORDT-08**: `set_delivery_complete` — `PUT /quiqdash/orders/batch/set_delivery_complete`
+- [x] **ORDT-09**: `set_on_hold` — `PUT /quiqdash/orders/batch/set_on_hold`
+- [x] **ORDT-10**: `set_return_to_origin` — `PUT /quiqdash/orders/batch/set_return_to_origin`
+- [x] **ORDT-11**: `set_returned_to_origin` — `PUT /quiqdash/orders/batch/set_returned_to_origin`
+- [x] **ORDT-12**: `set_delivery_failed` — `PUT /quiqdash/orders/batch/set_delivery_failed`
+- [x] **ORDT-13**: `set_collection_failed` — `PUT /quiqdash/courier/orders/set_collection_failed`
+- [x] **ORDT-14**: `unpool_order` — `PUT /quiqdash/missions/unpool/orders/{orderUUID}`
 
 ### Missions, Labels, Slips (MISS)
 
-- [ ] **MISS-01**: `create_mission` — `POST /quiqdash/missions` (Platform)
-- [ ] **MISS-02**: `transfer_mission_orders` — `PUT /quiqdash/missions/transfer/{missionID}` (Platform)
+- [x] **MISS-01**: `create_mission` — `POST /quiqdash/missions` (Platform)
+- [x] **MISS-02**: `transfer_mission_orders` — `PUT /quiqdash/missions/transfer/{missionID}` (Platform)
 - [ ] **MISS-03**: `download_pending_labels` — `GET /pending_orders_labels` (Quiqup GraphQL host, PDF) — base64 response
 - [x] **MISS-04**: `get_lastmile_order_label` — `GET /order_label/{order_ids}` (existing)
 - [ ] **MISS-05**: `download_return_label` — `GET /return_order_label/{orderId}` (Quiqup GraphQL host, PDF)
@@ -343,33 +343,33 @@ Deferred — useful but not required for "all endpoints reachable" v1 cut.
 | ORDL-12 | Phase 1 | Pending |
 | ORDS-01 | (shipped) | Validated |
 | ORDS-02 | Phase 3 | Pending |
-| ORDS-03 | Phase 4 | Pending |
-| ORDS-04 | Phase 4 | Pending |
+| ORDS-03 | Phase 4 | Shipped (04-03) |
+| ORDS-04 | Phase 4 | Shipped (04-03) |
 | ORDS-05 | Phase 3 | Pending |
-| ORDS-06 | Phase 4 | Pending |
-| ORDS-07 | Phase 4 | Pending |
+| ORDS-06 | Phase 4 | Shipped (04-03) |
+| ORDS-07 | Phase 4 | Shipped (04-03) |
 | ORDS-08 | Phase 3 / Plan 03-04 | Shipped (commit 69077cd) |
 | ORDC-01 | (shipped) | Validated |
 | ORDC-02 | (shipped) | Validated |
 | ORDC-03 | (shipped) | Validated |
-| ORDC-04 | Phase 4 | Pending |
-| ORDC-05 | Phase 4 | Pending |
+| ORDC-04 | Phase 4 | Shipped (04-04) |
+| ORDC-05 | Phase 4 | Shipped (04-04) |
 | ORDT-01 | (shipped) | Validated |
 | ORDT-02 | (shipped) | Validated |
-| ORDT-03 | Phase 4 | Pending |
-| ORDT-04 | Phase 4 | Pending |
-| ORDT-05 | Phase 4 | Pending |
-| ORDT-06 | Phase 4 | Pending |
-| ORDT-07 | Phase 4 | Pending |
-| ORDT-08 | Phase 4 | Pending |
-| ORDT-09 | Phase 4 | Pending |
-| ORDT-10 | Phase 4 | Pending |
-| ORDT-11 | Phase 4 | Pending |
-| ORDT-12 | Phase 4 | Pending |
-| ORDT-13 | Phase 4 | Pending |
-| ORDT-14 | Phase 4 | Pending |
-| MISS-01 | Phase 4 | Pending |
-| MISS-02 | Phase 4 | Pending |
+| ORDT-03 | Phase 4 | Shipped (04-01) |
+| ORDT-04 | Phase 4 | Shipped (04-01) |
+| ORDT-05 | Phase 4 | Shipped (04-01) |
+| ORDT-06 | Phase 4 | Shipped (04-01) |
+| ORDT-07 | Phase 4 | Shipped (04-01) |
+| ORDT-08 | Phase 4 | Shipped (04-01) |
+| ORDT-09 | Phase 4 | Shipped (04-02) |
+| ORDT-10 | Phase 4 | Shipped (04-02) |
+| ORDT-11 | Phase 4 | Shipped (04-02) |
+| ORDT-12 | Phase 4 | Shipped (04-02) |
+| ORDT-13 | Phase 4 | Shipped (04-02) |
+| ORDT-14 | Phase 4 | Shipped (04-02) |
+| MISS-01 | Phase 4 | Shipped (04-04) |
+| MISS-02 | Phase 4 | Shipped (04-04) |
 | MISS-03 | Phase 5 | Pending |
 | MISS-04 | (shipped) | Validated |
 | MISS-05 | Phase 5 | Pending |

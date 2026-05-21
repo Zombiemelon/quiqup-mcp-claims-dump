@@ -138,6 +138,68 @@ import { spec as setCollectionFailedBatchSpec } from "@/lib/tools/set-collection
 import { spec as setDeliveryFailedBatchSpec } from "@/lib/tools/set-delivery-failed-batch";
 import { spec as setDeliveryCompleteBatchSpec } from "@/lib/tools/set-delivery-complete-batch";
 
+// -- Phase 4: Wave 1 — Forward-path batch transitions (ORDT-03..08) --
+// All six tools are thin per-file wrappers around `defineBatchTransition`
+// (lib/tools/_batch-transition-factory.ts). The destructive gate, dry-run
+// shape, sequential per-id scope assertion, and guardrails block are
+// owned by the factory — see decision D-01 in
+// .planning/phases/04-orders-write-path-lifecycle/04-CONTEXT.md.
+import { spec as setCollectedSpec } from "@/lib/tools/set-collected";
+import { spec as setReceivedAtDepotSpec } from "@/lib/tools/set-received-at-depot";
+import { spec as setAtDepotSpec } from "@/lib/tools/set-at-depot";
+import { spec as setInTransitSpec } from "@/lib/tools/set-in-transit";
+import { spec as setScheduledSpec } from "@/lib/tools/set-scheduled";
+import { spec as setDeliveryCompleteSpec } from "@/lib/tools/set-delivery-complete";
+
+// -- Phase 4: Wave 2 — Exception-path transitions (ORDT-09..14) --
+// 5 factory wrappers (4 reason-bearing + 1 no-reason terminal) + 1
+// hand-written single-order destructive PUT (`unpool_order`). The 5
+// factory wrappers pick up the canonical destructive gate / dry-run /
+// scope-loop / guardrails from defineBatchTransition;
+// `unpool_order` mirrors the factory's handler ordering against the
+// canonical destructive helpers directly (it can't use the factory
+// because it's single-id, not batch). See decision D-01 specifics in
+// .planning/phases/04-orders-write-path-lifecycle/04-CONTEXT.md and
+// the reason-field-pin invariant (D-02): every reason-bearing tool's
+// description names its Phase-1 enumeration tool.
+import { spec as setOnHoldSpec } from "@/lib/tools/set-on-hold";
+import { spec as setReturnToOriginSpec } from "@/lib/tools/set-return-to-origin";
+import { spec as setReturnedToOriginSpec } from "@/lib/tools/set-returned-to-origin";
+import { spec as setDeliveryFailedSpec } from "@/lib/tools/set-delivery-failed";
+import { spec as setCollectionFailedSpec } from "@/lib/tools/set-collection-failed";
+import { spec as unpoolOrderSpec } from "@/lib/tools/unpool-order";
+
+// -- Phase 4: Wave 3 — Single-order mutations (ORDS-03/04/06/07) --
+// 4 single-order mutation tools. Only update_fulfilment_order_status
+// (ORDS-04) is destructive-gated (D-06); the other three carry numeric/
+// scope guards from the T-04 threat register (amount cap, weight range,
+// per-order scope assertion). NOTE: these imports were added by Wave 4
+// during shared-route wiring because Wave 3 left them dangling — the
+// tool files (lib/tools/export-order.ts etc.) and the registerTool() calls
+// below already existed, only the imports were missing (Rule 3 auto-fix
+// for the build-blocking issue). Wave 3's executor should treat this as
+// already-done when they continue.
+import { spec as exportOrderSpec } from "@/lib/tools/export-order";
+import { spec as updateFulfilmentOrderStatusSpec } from "@/lib/tools/update-fulfilment-order-status";
+import { spec as createOrderChargeSpec } from "@/lib/tools/create-order-charge";
+import { spec as updateOrderWeightSpec } from "@/lib/tools/update-order-weight";
+
+// -- Phase 4: Wave 4 — Creation + missions (ORDC-04/05, MISS-01/02) --
+// 3 non-destructive creation tools + 1 destructive mission transfer:
+//   - create_internal_fulfilment_order (ORDC-04, Platform JSON POST)
+//   - bulk_create_orders (ORDC-05, Platform multipart CSV — uses the
+//     hoisted lib/clients/_multipart.ts codec via PlatformApiClient.
+//     requestMultipart; D-08 surfaces per-row errors VERBATIM)
+//   - create_mission (MISS-01, Platform JSON POST, NOT destructive per D-05)
+//   - transfer_mission_orders (MISS-02, Platform PUT, DESTRUCTIVE-gated;
+//     per-id scope-checked; mission_id URL-encoded; 50-order cap)
+// See decisions D-05 (mission-gating asymmetry) and D-08 (bulk row-error
+// passthrough) in .planning/phases/04-orders-write-path-lifecycle/04-CONTEXT.md.
+import { spec as createInternalFulfilmentOrderSpec } from "@/lib/tools/create-internal-fulfilment-order";
+import { spec as bulkCreateOrdersSpec } from "@/lib/tools/bulk-create-orders";
+import { spec as createMissionSpec } from "@/lib/tools/create-mission";
+import { spec as transferMissionOrdersSpec } from "@/lib/tools/transfer-mission-orders";
+
 // Vercel/Next serverless function timeout (mcp-handler README's documented
 // ceiling on Hobby; higher available on Pro). The default of 10s is shorter
 // than the heavier `/orders/{id}/history` cold-path; bumping to 60s gives
@@ -279,6 +341,35 @@ const handler = createMcpHandler(
     registerTool(server, setCollectionFailedBatchSpec);
     registerTool(server, setDeliveryFailedBatchSpec);
     registerTool(server, setDeliveryCompleteBatchSpec);
+
+    // -- Phase 4: Wave 1 — Forward-path batch transitions (ORDT-03..08) — confirm:true gated via factory --
+    registerTool(server, setCollectedSpec);
+    registerTool(server, setReceivedAtDepotSpec);
+    registerTool(server, setAtDepotSpec);
+    registerTool(server, setInTransitSpec);
+    registerTool(server, setScheduledSpec);
+    registerTool(server, setDeliveryCompleteSpec);
+
+    // -- Phase 4: Wave 2 — Exception-path transitions (ORDT-09..14) — confirm:true gated --
+    registerTool(server, setOnHoldSpec);
+    registerTool(server, setReturnToOriginSpec);
+    registerTool(server, setReturnedToOriginSpec);
+    registerTool(server, setDeliveryFailedSpec);
+    registerTool(server, setCollectionFailedSpec);
+    registerTool(server, unpoolOrderSpec);
+
+    // -- Phase 4: Wave 3 — Single-order mutations (ORDS-03/04/06/07) — only ORDS-04 (update_fulfilment_order_status) is confirm:true gated --
+    registerTool(server, exportOrderSpec);
+    registerTool(server, updateFulfilmentOrderStatusSpec);
+    registerTool(server, createOrderChargeSpec);
+    registerTool(server, updateOrderWeightSpec);
+
+    // -- Phase 4: Wave 4 — Creation + missions (ORDC-04/05, MISS-01/02) --
+    // 3 non-destructive + 1 destructive (transfer_mission_orders).
+    registerTool(server, createInternalFulfilmentOrderSpec);
+    registerTool(server, bulkCreateOrdersSpec);
+    registerTool(server, createMissionSpec);
+    registerTool(server, transferMissionOrdersSpec);
   },
   {
     // SEP-973 `icons` on `Implementation` — Claude.ai's connector UI renders
