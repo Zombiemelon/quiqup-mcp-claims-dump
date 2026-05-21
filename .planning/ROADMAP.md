@@ -99,10 +99,10 @@ Plans:
   5. Every DESTRUCTIVE tool in this phase rejects calls missing `confirm: true` with a uniform error shape and exposes the affected order count in its response so agents can verify scope before confirming.
 **Plans:** 5 plans
 Plans:
-- [ ] 04-01-PLAN.md — Factory + 6 forward-path batch transitions (ORDT-03..08) — Wave 1
-- [ ] 04-02-PLAN.md — 6 exception-path transitions: 4 reason-bearing + set_returned_to_origin + unpool_order (ORDT-09..14) — Wave 2
-- [ ] 04-03-PLAN.md — 4 single-order mutations (ORDS-03/04/06/07) — Wave 3
-- [ ] 04-04-PLAN.md — Creation + missions: ORDC-04, ORDC-05 multipart, MISS-01, MISS-02 — Wave 4
+- [x] 04-01-PLAN.md — Factory + 6 forward-path batch transitions (ORDT-03..08) — Wave 1 — completed 2026-05-20
+- [x] 04-02-PLAN.md — 6 exception-path transitions: 4 reason-bearing + set_returned_to_origin + unpool_order (ORDT-09..14) — Wave 2 — completed 2026-05-21
+- [x] 04-03-PLAN.md — 4 single-order mutations (ORDS-03/04/06/07) — Wave 3 — completed 2026-05-21
+- [x] 04-04-PLAN.md — Creation + missions: ORDC-04, ORDC-05 multipart, MISS-01, MISS-02 — Wave 4 — completed 2026-05-21
 - [ ] 04-05-PLAN.md — Langfuse eval coverage for 4 Phase-4 tool families + CI gate updates — Wave 5
 **UI hint**: no
 
