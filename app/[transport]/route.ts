@@ -168,6 +168,37 @@ import { spec as setDeliveryFailedSpec } from "@/lib/tools/set-delivery-failed";
 import { spec as setCollectionFailedSpec } from "@/lib/tools/set-collection-failed";
 import { spec as unpoolOrderSpec } from "@/lib/tools/unpool-order";
 
+// -- Phase 4: Wave 3 — Single-order mutations (ORDS-03/04/06/07) --
+// 4 single-order mutation tools. Only update_fulfilment_order_status
+// (ORDS-04) is destructive-gated (D-06); the other three carry numeric/
+// scope guards from the T-04 threat register (amount cap, weight range,
+// per-order scope assertion). NOTE: these imports were added by Wave 4
+// during shared-route wiring because Wave 3 left them dangling — the
+// tool files (lib/tools/export-order.ts etc.) and the registerTool() calls
+// below already existed, only the imports were missing (Rule 3 auto-fix
+// for the build-blocking issue). Wave 3's executor should treat this as
+// already-done when they continue.
+import { spec as exportOrderSpec } from "@/lib/tools/export-order";
+import { spec as updateFulfilmentOrderStatusSpec } from "@/lib/tools/update-fulfilment-order-status";
+import { spec as createOrderChargeSpec } from "@/lib/tools/create-order-charge";
+import { spec as updateOrderWeightSpec } from "@/lib/tools/update-order-weight";
+
+// -- Phase 4: Wave 4 — Creation + missions (ORDC-04/05, MISS-01/02) --
+// 3 non-destructive creation tools + 1 destructive mission transfer:
+//   - create_internal_fulfilment_order (ORDC-04, Platform JSON POST)
+//   - bulk_create_orders (ORDC-05, Platform multipart CSV — uses the
+//     hoisted lib/clients/_multipart.ts codec via PlatformApiClient.
+//     requestMultipart; D-08 surfaces per-row errors VERBATIM)
+//   - create_mission (MISS-01, Platform JSON POST, NOT destructive per D-05)
+//   - transfer_mission_orders (MISS-02, Platform PUT, DESTRUCTIVE-gated;
+//     per-id scope-checked; mission_id URL-encoded; 50-order cap)
+// See decisions D-05 (mission-gating asymmetry) and D-08 (bulk row-error
+// passthrough) in .planning/phases/04-orders-write-path-lifecycle/04-CONTEXT.md.
+import { spec as createInternalFulfilmentOrderSpec } from "@/lib/tools/create-internal-fulfilment-order";
+import { spec as bulkCreateOrdersSpec } from "@/lib/tools/bulk-create-orders";
+import { spec as createMissionSpec } from "@/lib/tools/create-mission";
+import { spec as transferMissionOrdersSpec } from "@/lib/tools/transfer-mission-orders";
+
 // Vercel/Next serverless function timeout (mcp-handler README's documented
 // ceiling on Hobby; higher available on Pro). The default of 10s is shorter
 // than the heavier `/orders/{id}/history` cold-path; bumping to 60s gives
@@ -324,6 +355,19 @@ const handler = createMcpHandler(
     registerTool(server, setDeliveryFailedSpec);
     registerTool(server, setCollectionFailedSpec);
     registerTool(server, unpoolOrderSpec);
+
+    // -- Phase 4: Wave 3 — Single-order mutations (ORDS-03/04/06/07) — only ORDS-04 (update_fulfilment_order_status) is confirm:true gated --
+    registerTool(server, exportOrderSpec);
+    registerTool(server, updateFulfilmentOrderStatusSpec);
+    registerTool(server, createOrderChargeSpec);
+    registerTool(server, updateOrderWeightSpec);
+
+    // -- Phase 4: Wave 4 — Creation + missions (ORDC-04/05, MISS-01/02) --
+    // 3 non-destructive + 1 destructive (transfer_mission_orders).
+    registerTool(server, createInternalFulfilmentOrderSpec);
+    registerTool(server, bulkCreateOrdersSpec);
+    registerTool(server, createMissionSpec);
+    registerTool(server, transferMissionOrdersSpec);
   },
   {
     // SEP-973 `icons` on `Implementation` — Claude.ai's connector UI renders
