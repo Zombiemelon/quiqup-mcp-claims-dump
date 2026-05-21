@@ -84,6 +84,7 @@
     "set_collection_failed": "enabled",
     "set_collection_failed_batch": "enabled",
     "set_delivery_complete": "enabled",
+    "set_delivery_complete_batch": "enabled",
     "set_delivery_failed": "enabled",
     "set_delivery_failed_batch": "enabled",
     "set_in_transit": "enabled",

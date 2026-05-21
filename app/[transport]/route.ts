@@ -136,6 +136,7 @@ import { spec as uploadOrderDocumentSpec } from "@/lib/tools/upload-order-docume
 import { spec as setOutForDeliveryBatchSpec } from "@/lib/tools/set-out-for-delivery-batch";
 import { spec as setCollectionFailedBatchSpec } from "@/lib/tools/set-collection-failed-batch";
 import { spec as setDeliveryFailedBatchSpec } from "@/lib/tools/set-delivery-failed-batch";
+import { spec as setDeliveryCompleteBatchSpec } from "@/lib/tools/set-delivery-complete-batch";
 
 // -- Phase 4: Wave 1 — Forward-path batch transitions (ORDT-03..08) --
 // All six tools are thin per-file wrappers around `defineBatchTransition`
@@ -339,6 +340,7 @@ const handler = createMcpHandler(
     registerTool(server, setOutForDeliveryBatchSpec);
     registerTool(server, setCollectionFailedBatchSpec);
     registerTool(server, setDeliveryFailedBatchSpec);
+    registerTool(server, setDeliveryCompleteBatchSpec);
 
     // -- Phase 4: Wave 1 — Forward-path batch transitions (ORDT-03..08) — confirm:true gated via factory --
     registerTool(server, setCollectedSpec);

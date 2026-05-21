@@ -1,0 +1,54 @@
+name: Unit Tests
+
+# Runs the vitest unit suite (tests/**). MSW-mocked — no live upstream
+# calls, no secrets needed. Sister workflow to eval-gate.yml (which runs
+# LLM-driven Langfuse evals) and claude-review.yml (AI code review).
+# Together they cover three distinct failure modes:
+#
+#   - eval-gate.yml      — does the LLM pick the right tool with the right
+#                          args, given the tool description / surface?
+#   - unit-tests.yml     — does the handler code actually do what it says
+#                          (URL shape, body, error mapping, guardrails)?
+#   - claude-review.yml  — AI reviewer commentary on the diff.
+#
+# The vitest suite mocks fetch at the boundary via MSW (tests/setup/msw.ts)
+# so this job needs no Quiqup / Clerk / Langfuse / Anthropic credentials.
+
+on:
+  pull_request:
+    paths:
+      - "lib/**"
+      - "app/**"
+      - "tests/**"
+      - "vitest.config.ts"
+      - "tsconfig.json"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/unit-tests.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel earlier in-progress runs on the same PR/branch.
+concurrency:
+  group: unit-tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vitest:
+    name: Unit tests (vitest, MSW-mocked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run vitest
+        run: bun run test
