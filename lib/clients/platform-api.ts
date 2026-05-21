@@ -62,6 +62,7 @@ import {
   getPlatformApiBaseUrl,
   type QuiqupEnvironment,
 } from "./quiqup-env";
+import { fetchMultipart } from "./_multipart";
 
 export interface PlatformApiClientOptions {
   jwt: string;
@@ -134,5 +135,33 @@ export class PlatformApiClient {
       contentType,
       base64: Buffer.from(buf).toString("base64"),
     };
+  }
+
+  /**
+   * Multipart POST/PUT against the Platform host. Used by
+   * `bulk_create_orders` (ORDC-05 — POST /quiqdash/bulk_orders) and any
+   * future Platform multipart consumer (Phase 6 bulk-validate /
+   * bulk-commit product CSVs land here).
+   *
+   * CRITICAL: this method does NOT set `Content-Type`. The runtime sets
+   * `multipart/form-data; boundary=...` from the FormData body. Manually
+   * overriding clobbers the boundary and the upstream rejects the body.
+   * The canonical 03-04 lockup — re-tested at every call site AND
+   * grep-gated at the per-tool source level.
+   *
+   * Behavior delegates to `lib/clients/_multipart.ts::fetchMultipart`
+   * (hoisted by 04-04 Task 2). This method is a host-aware wrapper that
+   * resolves the Platform base URL from `opts.environment` and forwards
+   * the JWT.
+   */
+  async requestMultipart(
+    method: HttpMethod,
+    path: string,
+    formData: FormData,
+  ): Promise<unknown> {
+    const base =
+      this.opts.baseUrl ?? getPlatformApiBaseUrl(this.opts.environment);
+    const url = `${base}${path}`;
+    return fetchMultipart(method, url, this.opts.jwt, formData);
   }
 }

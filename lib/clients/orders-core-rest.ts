@@ -44,6 +44,7 @@
 
 import { QuiqupHttpError, type HttpMethod } from "./quiqup-lastmile";
 import type { QuiqupEnvironment } from "./quiqup-env";
+import { fetchMultipart } from "./_multipart";
 
 /** Canonical Orders Core REST base URLs by environment. */
 export const ORDERS_REST_BASE_URLS = {
@@ -164,24 +165,10 @@ export class OrdersCoreRestClient {
   ): Promise<unknown> {
     const base = this.opts.baseUrl ?? getOrdersRestBaseUrl(this.opts.environment);
     const url = `${base}${path}`;
-    const res = await fetch(url, {
-      method,
-      headers: {
-        Authorization: `Bearer ${this.opts.jwt}`,
-        Accept: "application/json",
-        // INTENTIONALLY no Content-Type — the runtime sets
-        // `multipart/form-data; boundary=...` from the FormData body.
-      },
-      body: formData,
-    });
-    if (!res.ok) {
-      throw new QuiqupHttpError(res.status, await res.text());
-    }
-    if (res.status === 204) return null;
-    const contentType = res.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
-      return res.json();
-    }
-    return null;
+    // Delegates to the shared `fetchMultipart` helper in `_multipart.ts`
+    // (hoisted by 04-04 Task 2). The Content-Type-omission lockup lives
+    // there now — this method is a host-aware wrapper that resolves the
+    // base URL and forwards the JWT.
+    return fetchMultipart(method, url, this.opts.jwt, formData);
   }
 }
