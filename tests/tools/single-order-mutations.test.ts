@@ -643,8 +643,11 @@ describe("update_order_weight", () => {
       string,
       unknown
     >;
-    expect(body.weight).toBe(2.5);
-    expect("weight_kg" in body).toBe(false);
+    // Wire-format: upstream key is `weight_kg` (Wave-3 live-staging
+    // CALL-LOG confirmed: `{ weight: 2.5 }` returned 400 with
+    // "weight_kg: This field is required.").
+    expect(body.weight_kg).toBe(2.5);
+    expect("weight" in body).toBe(false);
 
     const text = (result.content[0] as { type: "text"; text: string }).text;
     expect(text).toContain("Updated weight");

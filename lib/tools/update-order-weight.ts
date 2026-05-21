@@ -119,14 +119,15 @@ export const spec: ToolSpec<typeof inputSchema, typeof outputSchema> = {
       environment: args.environment,
     });
 
-    // Wire-format translation: agent-facing `weight_kg` → upstream `weight`.
-    // The Quiqdash frontend's app/lib/orders.ts emits `weight` (unit
-    // implicit at the BE). If Task-3 live-staging confirms the BE also
-    // accepts `weight_kg` verbatim, this translation can be removed.
+    // Wire-format: upstream key is `weight_kg` (confirmed by Wave-3
+    // live-staging CALL-LOG — a request body `{ weight: 2.5 }` returns
+    // HTTP 400 with `"weight_kg":["This field is required."]`). The
+    // agent-facing schema key happens to match the wire key — no
+    // translation needed.
     const data = await client.request(
       "PATCH",
       `/quiqdash/orders/${encodeURIComponent(args.order_id)}/weight`,
-      { body: { weight: args.weight_kg } },
+      { body: { weight_kg: args.weight_kg } },
     );
 
     return {
