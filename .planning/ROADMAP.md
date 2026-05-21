@@ -18,7 +18,7 @@ Phase 1 establishes the auth/lookup substrate that everything else depends on. P
 - [x] **Phase 1: Account, Auth & Reference Data** — Read-mostly Platform endpoints + Google Places client; establishes the auth/lookup substrate that later phases depend on.
 - [x] **Phase 2: Integrations (Shopify / WooCommerce / Salla)** — External-OAuth-shape Platform endpoints; two DESTRUCTIVE deletes gated by `confirm: true`. Completed 2026-05-19 (6/6 waves).
 - [x] **Phase 3: Orders — Read Path** — Orders Core GraphQL + Audit + Ex-core CSV export + Quiqup REST history; introduces three new service clients. Completed 2026-05-20 (5/5 waves).
-- [ ] **Phase 4: Orders — Write Path & Lifecycle** — All `batch/set_*` status transitions, mission creation/transfer, and write-side Platform endpoints; every tool DESTRUCTIVE-gated.
+- [x] **Phase 4: Orders — Write Path & Lifecycle** — All `batch/set_*` status transitions, mission creation/transfer, and write-side Platform endpoints; every tool DESTRUCTIVE-gated. Completed 2026-05-21 (5/5 waves; 20 tools shipped + 4 family evals + 8 STATIC scorers locking D-01..D-06 + T-04-13/14/26..31 at CI).
 - [ ] **Phase 5: Labels, Slips & PDFs** — Quiqup-GraphQL-host REST client + base64 PDF response pattern shared by later phases (FIN PDFs).
 - [ ] **Phase 6: Inbound completion + Fulfilment gaps** — Three INBD gaps + six PROD gaps; closes the fulfilment receiving + product catalog endpoints.
 - [ ] **Phase 7: Inventory expansion** — CBM history, totals, sync triggers/state, snapshot, CSV exports; completes fulfilment inventory surface.
@@ -103,7 +103,7 @@ Plans:
 - [x] 04-02-PLAN.md — 6 exception-path transitions: 4 reason-bearing + set_returned_to_origin + unpool_order (ORDT-09..14) — Wave 2 — completed 2026-05-21
 - [x] 04-03-PLAN.md — 4 single-order mutations (ORDS-03/04/06/07) — Wave 3 — completed 2026-05-21
 - [x] 04-04-PLAN.md — Creation + missions: ORDC-04, ORDC-05 multipart, MISS-01, MISS-02 — Wave 4 — completed 2026-05-21
-- [ ] 04-05-PLAN.md — Langfuse eval coverage for 4 Phase-4 tool families + CI gate updates — Wave 5
+- [x] 04-05-PLAN.md — Langfuse eval coverage for 4 Phase-4 tool families + CI gate updates — Wave 5 — completed 2026-05-21
 **UI hint**: no
 
 ### Phase 5: Labels, Slips & PDFs
@@ -204,9 +204,9 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Account, Auth & Reference Data | 4/4 | Plans complete (awaiting gsd-verifier) | 2026-05-19 |
-| 2. Integrations (Shopify / WooCommerce / Salla) | 2/6 | In progress (Waves 1+2 complete) | 2026-05-19 |
-| 3. Orders — Read Path | 3/5 | In progress (Waves 1+2+3 complete) | 2026-05-20 |
-| 4. Orders — Write Path & Lifecycle | 0/5 | Plans created | - |
+| 2. Integrations (Shopify / WooCommerce / Salla) | 6/6 | Complete | 2026-05-19 |
+| 3. Orders — Read Path | 5/5 | Complete | 2026-05-20 |
+| 4. Orders — Write Path & Lifecycle | 5/5 | Complete | 2026-05-21 |
 | 5. Labels, Slips & PDFs | 0/0 | Not started | - |
 | 6. Inbound completion + Fulfilment gaps | 0/0 | Not started | - |
 | 7. Inventory expansion | 0/0 | Not started | - |

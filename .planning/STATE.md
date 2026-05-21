@@ -5,25 +5,25 @@
 ## Project Reference
 
 - **Core value:** Every backend endpoint that powers Quiqdash v3 must be reachable from an LLM via a single MCP server, with the same auth, the same error semantics, and the same observability as the existing staging-verified tools.
-- **Current focus:** Phase 4 — Orders write path & lifecycle (status transitions, charges, weight edits, exports, fulfilment-status patches, internal/bulk creates, mission orchestration — every tool DESTRUCTIVE-gated)
+- **Current focus:** Phase 5 — Labels, Slips & PDFs (Quiqup-GraphQL-host REST client + base64 PDF response pattern; pending-label, return-label, slip downloads — reuses the Phase-3 binary-envelope contract { contentType, base64, filenameHint })
 
 ## Current Position
 
-- **current_phase:** 4 (in progress — Waves 1-4 shipped, Wave 5 eval coverage remaining)
-- **current_plan:** 04-05 (next — Langfuse eval coverage for 4 Phase-4 tool families + CI gate updates)
-- **status:** Phase 4 Waves 1-4 complete (4/5 plans shipped — all 20 destructive-gated mutation tools live; canonical batch-transition factory + multipart codec hoisted to lib/clients/_multipart.ts)
-- **progress:** Phase 4: 4/5 plans complete — 20/20 tools shipped across batch transitions (12), single-order mutations (4), creation (2), missions (2); 718 passed | 3 skipped; live-staging CALL-LOG sweeps run for all 4 waves with one real bug caught + fixed (update_order_weight wire-key was `weight` but upstream demands `weight_kg` — fix 5d1b618)
+- **current_phase:** 5 (next — Labels, Slips & PDFs)
+- **current_plan:** 05-01 (next — pending planning)
+- **status:** Phase 4 COMPLETE (5/5 plans shipped — all 20 destructive-gated mutation tools live + 4 family evals + 8 new STATIC scorers locking D-01..D-06 + T-04-13/14/26..31 at CI). Phases 1-4 all done.
+- **progress:** Phase 4 closed 2026-05-21 with plan 04-05 (Wave 5 eval coverage). 4 new Langfuse evals (batch-transitions, single-order-mutations, order-creation, missions) cover all 20 Phase-4 tools; EVAL_GATE=1 now blocks on Phase-4 family regressions at CI. 718 passed | 3 skipped; no test regressions.
 
 ```
-[████████            ] 33% (Phase 1 + Phase 2 + Phase 3 complete + Phase 4 Waves 1-4 of 5)
+[█████████           ] 40% (Phases 1-4 of 10 complete)
 ```
 
 ## Performance Metrics
 
-- Phases completed: 3 (Phase 1 + Phase 2 + Phase 3)
-- Plans completed: 19 (01-01..01-04, 02-01..02-06, 03-01..03-05, 04-01..04-04)
-- Requirements shipped (v1): see REQUIREMENTS.md (Phase 4 adds 20 new tools: ORDS-03/04/06/07, ORDC-04/05, ORDT-03..14, MISS-01/02)
-- Service-host families with Langfuse eval: 13 (4 Phase-1 + 5 Phase-2 + 4 Phase-3). Phase-4 family evals (batch-transitions, single-order-mutations, order-creation, missions) deferred to plan 04-05 per the canonical Phase-N final-wave eval pattern.
+- Phases completed: 4 (Phase 1 + Phase 2 + Phase 3 + Phase 4)
+- Plans completed: 20 (01-01..01-04, 02-01..02-06, 03-01..03-05, 04-01..04-05)
+- Requirements shipped (v1): see REQUIREMENTS.md (Phase 4 added 20 tools: ORDS-03/04/06/07, ORDC-04/05, ORDT-03..14, MISS-01/02 — all locked at CI via plan 04-05 STATIC scorers).
+- Service-host families with Langfuse eval: 13 (4 Phase-1 + 5 Phase-2 + 4 Phase-3). Phase 4 introduced 0 new service hosts — coverage is per-tool-FAMILY: per-family eval count goes 13 → 17 with batch-transitions + single-order-mutations + order-creation + missions (4 Phase-4 families).
 - New service hosts introduced in Phase 4: 0 (all 20 tools reuse Phases 1-3 clients — platform-api, quiqup-rest, orders-core-rest).
 
 ### Plan Execution Log
@@ -49,6 +49,7 @@
 | 04    | 02   | ~16m    | 3     | 11    | 2026-05-21 |
 | 04    | 03   | ~17m    | 3     | 5     | 2026-05-21 |
 | 04    | 04   | ~16m    | 4     | 12    | 2026-05-21 |
+| 04    | 05   | ~15m    | 4     | 14    | 2026-05-21 |
 
 ## Accumulated Context
 
@@ -94,6 +95,12 @@
 - 2026-05-20 (03-04): `OrdersCoreRestClient.requestMultipart` deliberately omits the `Content-Type` header — fetch() sets `multipart/form-data; boundary=<random>` automatically from the FormData body. Manual override clobbers the boundary and the upstream rejects the body. Locked in by a runtime test that captures the outbound Content-Type and asserts `startsWith("multipart/form-data")` AND `contains("boundary=")`. This is the canonical multipart pattern for any future MCP tool uploading binary payloads.
 - 2026-05-20 (03-04): `upload_order_document` (ORDS-08) is the first write tool in Phase 3 — carries the BL-01 canonical guardrails block (rateLimit 10/min, idempotency on idempotency_key with 15min TTL, audit:true) AND structurally omits user_id/actor_id/actor_email from its input schema (BL-04 server-binding — identity bound to auth.userId at handler level). Pre-flight 10MB cap (13_500_000 base64 chars) enforced BEFORE JWT mint AND BEFORE FormData construction so abusive callers cost the MCP nothing upstream.
 - 2026-05-20 (03-04): Ex-core gets a SEPARATE ExCoreError class (not QuiqupHttpError reuse) — distinct service host with its own operational backstop, even though the auth bridge is shared. Mirrors QuiqupHttpError's shape (status + body) so callers branch on err.status uniformly. Conversely, Orders Core REST reuses QuiqupHttpError because Orders Core is a Quiqup-prefixed service and the registerTool wrapper's QuiqupHttpError → MCP-error mapping is the desired behaviour. Establishes the policy: NEW service-host families get their own error class; sibling clients of an existing host family reuse the existing class.
+- 2026-05-21 (04-05): Plan-level eval-coverage pattern for phases that introduce no new service hosts — group by tool-FAMILY rather than per-host. Phase 4 introduced 0 new hosts but 20 new tools across 4 families (batch-transitions, single-order-mutations, order-creation, missions); each family ships its own Langfuse eval + at least one STATIC scorer locking the family's critical decisions at CI. Mirrors how 03-05 combined Quiqup REST + Audit (same-host, different sub-surfaces) into one family eval.
+- 2026-05-21 (04-05): STATIC scorer prefix-matching pattern (e.g. `confirm.description.startsWith("DESTRUCTIVE-GATE:")`) is preferred over strict Zod-instance identity for batch-style locks. Phase-2's destructive-integrations scorer asserts strict instance equality for 2 delete tools; that's pragmatic for a small surface. For Phase-4's 14 destructive tools — many built via factory which legitimately wraps the canonical helper — prefix-matching is the structural assertion that survives factory composition while still tripping on any non-canonical replacement.
+- 2026-05-21 (04-05): D-02 reason-field-pin scorer accepts the `list_*_reasons` enumeration-tool name appearing in EITHER `spec.description` OR the reason-field's own description. Locks D-02 ("the reason field description names the Phase-1 enumeration tool") faithfully — set_on_hold / set_delivery_failed / set_collection_failed duplicate the mention in spec.description, but set_return_to_origin only carries it on the reason field description. Both are D-02 compliant.
+- 2026-05-21 (04-05): args-overlap scorer extended with BL-04 forbidden-keys check (order-creation only) — first eval scorer that combines model-behaviour signal (the LLM ignored user_id when told to ignore it) with structural negative-case enforcement (the schema doesn't accept user_id anyway). Pattern reusable in future phases for any tool where caller-supplied fields are SEMANTICALLY rejected but the agent might still try to pass them.
+- 2026-05-21 (04-05): Numeric-bound / CSV-cap / dry-run-richness scorers use readFile + substring rather than structural Zod inspection. The values (`100_000`, `1000`, `13_500_000`, `dryRun: true`) live as numeric literals or string fragments in source — Zod schemas don't expose `.max(...)` parameters cleanly. Substring check is the simpler, more readable lock that PR-reviewers can verify without running the scorer.
+- 2026-05-21 (04-05): Phase 4 closed cleanly without surfacing follow-up infra work. The factory pattern (D-01) absorbed 11 of the 12 batch-transition tools into one chokepoint; unpool_order remains hand-written because its single-id PATH parameter doesn't fit the batch-shaped factory. Future phases adding a similarly-shaped lifecycle group SHOULD reach for the factory pattern rather than 12 hand-written files.
 
 ### Todos
 
