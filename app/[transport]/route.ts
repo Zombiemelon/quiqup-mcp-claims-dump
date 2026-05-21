@@ -150,6 +150,24 @@ import { spec as setInTransitSpec } from "@/lib/tools/set-in-transit";
 import { spec as setScheduledSpec } from "@/lib/tools/set-scheduled";
 import { spec as setDeliveryCompleteSpec } from "@/lib/tools/set-delivery-complete";
 
+// -- Phase 4: Wave 2 — Exception-path transitions (ORDT-09..14) --
+// 5 factory wrappers (4 reason-bearing + 1 no-reason terminal) + 1
+// hand-written single-order destructive PUT (`unpool_order`). The 5
+// factory wrappers pick up the canonical destructive gate / dry-run /
+// scope-loop / guardrails from defineBatchTransition;
+// `unpool_order` mirrors the factory's handler ordering against the
+// canonical destructive helpers directly (it can't use the factory
+// because it's single-id, not batch). See decision D-01 specifics in
+// .planning/phases/04-orders-write-path-lifecycle/04-CONTEXT.md and
+// the reason-field-pin invariant (D-02): every reason-bearing tool's
+// description names its Phase-1 enumeration tool.
+import { spec as setOnHoldSpec } from "@/lib/tools/set-on-hold";
+import { spec as setReturnToOriginSpec } from "@/lib/tools/set-return-to-origin";
+import { spec as setReturnedToOriginSpec } from "@/lib/tools/set-returned-to-origin";
+import { spec as setDeliveryFailedSpec } from "@/lib/tools/set-delivery-failed";
+import { spec as setCollectionFailedSpec } from "@/lib/tools/set-collection-failed";
+import { spec as unpoolOrderSpec } from "@/lib/tools/unpool-order";
+
 // Vercel/Next serverless function timeout (mcp-handler README's documented
 // ceiling on Hobby; higher available on Pro). The default of 10s is shorter
 // than the heavier `/orders/{id}/history` cold-path; bumping to 60s gives
@@ -298,6 +316,14 @@ const handler = createMcpHandler(
     registerTool(server, setInTransitSpec);
     registerTool(server, setScheduledSpec);
     registerTool(server, setDeliveryCompleteSpec);
+
+    // -- Phase 4: Wave 2 — Exception-path transitions (ORDT-09..14) — confirm:true gated --
+    registerTool(server, setOnHoldSpec);
+    registerTool(server, setReturnToOriginSpec);
+    registerTool(server, setReturnedToOriginSpec);
+    registerTool(server, setDeliveryFailedSpec);
+    registerTool(server, setCollectionFailedSpec);
+    registerTool(server, unpoolOrderSpec);
   },
   {
     // SEP-973 `icons` on `Implementation` — Claude.ai's connector UI renders
